@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="ru" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Start Page</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            500: '#6366f1',
+                            600: '#4f46e5'
+                        },
+                        secondary: '#8b5cf6',
+                        dark: {
+                            900: '#0f172a',
+                            800: '#1e293b',
+                            700: '#334155'
+                        },
+                        light: '#e2e8f0',
+                        accent: '#c7d2fe'
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer base {
+            body {
+                @apply bg-slate-100 text-slate-800 dark:bg-dark-900 dark:text-slate-200 min-h-screen p-5 overflow-x-hidden;
+                background-attachment: fixed;
+            }
+            .site-item {
+                @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-xl;
+            }
+            .tab {
+                @apply transition-all duration-300;
+            }
+            .no-select {
+                -webkit-user-select: none;
+                -moz-user-select: none;
+                -ms-user-select: none;
+                user-select: none;
+            }
+        }
+        
+        @layer components {
+            .settings-panel {
+                @apply bg-white dark:bg-dark-700 rounded-2xl p-6 shadow-lg;
+            }
+            
+            .toggle-switch {
+                @apply relative inline-block w-12 h-6 rounded-full bg-slate-300 dark:bg-slate-600;
+            }
+            
+            .toggle-switch:after {
+                @apply content-[''] absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-all duration-300;
+            }
+            
+            input:checked + .toggle-switch {
+                @apply bg-primary-500;
+            }
+            
+            input:checked + .toggle-switch:after {
+                @apply left-7;
+            }
+
+            .panel {
+                @apply bg-white dark:bg-dark-800 border border-slate-300 dark:border-slate-700 shadow-xl;
+            }
+            
+            .icon-grid-item {
+               @apply p-3 rounded-lg flex flex-col items-center bg-slate-100 dark:bg-dark-700 hover:bg-slate-200 dark:hover:bg-dark-700;
+            }
+            .icon-grid-item-icon {
+                @apply text-2xl mb-2;
+            }
+            .icon-grid-item-name {
+                @apply text-xs text-center break-all w-full;
+            }
+            
+            .icon-manager-container {
+                @apply flex flex-col max-h-[80vh] w-full;
+            }
+            
+            .icon-manager-header {
+                @apply flex-shrink-0;
+            }
+            
+            .icon-manager-content {
+                @apply flex flex-col flex-1 min-h-0;
+            }
+            
+            .icon-manager-form {
+                @apply flex-shrink-0;
+            }
+            
+            .icon-manager-scroll-container {
+                @apply flex-1 min-h-0 overflow-y-auto;
+            }
+            
+            .icon-manager-grid {
+                @apply grid grid-cols-3 gap-3 p-2;
+            }
+            
+            .icon-manager-footer {
+                @apply flex-shrink-0;
+            }
+            
+            /* Стили для скроллбара */
+            .icon-manager-scroll-container::-webkit-scrollbar {
+                @apply w-3;
+            }
+            
+            .icon-manager-scroll-container::-webkit-scrollbar-track {
+                @apply bg-slate-100 dark:bg-dark-700 rounded;
+            }
+            
+            .icon-manager-scroll-container::-webkit-scrollbar-thumb {
+                @apply bg-slate-300 dark:bg-dark-700 rounded hover:bg-slate-400 dark:hover:bg-dark-700;
+            }
+
+            .icon-grid {
+                @apply grid grid-cols-3 gap-3 p-2;
+            }
+        }
+    </style>
+</head>
+<body class="font-sans">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { createRoot } = ReactDOM;
+
+        // Основной компонент приложения
+        function App() {
+            const [activeTab, setActiveTab] = useState('all');
+            const [showWeather, setShowWeather] = useState(true);
+            const [currentTime, setCurrentTime] = useState('');
+            const [currentDate, setCurrentDate] = useState('');
+            const [weatherData, setWeatherData] = useState({ temp: 22, condition: 'sunny' });
+            const [city, setCity] = useState('Новосибирск');
+            const [darkMode, setDarkMode] = useState(false);
+            const [showSettings, setShowSettings] = useState(false);
+            const [showGroupModal, setShowGroupModal] = useState(false);
+            const [showSiteModal, setShowSiteModal] = useState(false);
+            const [showIconManager, setShowIconManager] = useState(false);
+            const [editingGroup, setEditingGroup] = useState(null);
+            const [editingSite, setEditingSite] = useState(null);
+            const [selectedGroup, setSelectedGroup] = useState(null);
+            const [newCustomIcon, setNewCustomIcon] = useState('');
+            const [cities] = useState([
+                'Москва', 'Санкт-Петербург', 'Екатеринбург', 
+                'Новосибирск', 'Казань', 'Сочи'
+            ]);
+            
+            // Формы
+            const [groupForm, setGroupForm] = useState({
+                name: '',
+                icon: 'globe',
+                color: 'text-blue-500'
+            });
+            
+            const [siteForm, setSiteForm] = useState({
+                name: '',
+                url: '',
+                icon: 'globe'
+            });
+            
+            // Цвета для групп
+            const groupColors = [
+                'text-blue-500', 'text-red-500', 'text-green-500', 
+                'text-yellow-500', 'text-purple-500', 'text-pink-500',
+                'text-indigo-500', 'text-emerald-500', 'text-amber-500'
+            ];
+            
+            // Стандартные иконки
+            const defaultIcons = [
+                'search', 'globe', 'home', 'envelope', 'user', 'users', 
+                'briefcase', 'book', 'calendar', 'file', 'folder', 
+                'image', 'music', 'play', 'film', 'gamepad', 'shopping-cart',
+                'heart', 'star', 'bell', 'flag', 'cog', 'wrench', 'lock',
+                'unlock', 'cloud', 'database', 'microchip', 'robot',
+                'fab fa-google', 'fab fa-youtube', 'fab fa-facebook', 'fab fa-twitter',
+                'fab fa-instagram',
+                'fab fa-github', 'fab fa-gitlab', 'fab fa-spotify', 'fab fa-apple',
+                'fab fa-windows', 'fab fa-android', 'fab fa-chrome',
+                'fab fa-firefox',
+            ];
+            
+            // Пользовательские иконки
+            const [customIcons, setCustomIcons] = useState(() => {
+                const saved = localStorage.getItem('customIcons');
+                return saved ? JSON.parse(saved) : defaultIcons;
+            });
+            
+            // Все иконки (стандартные + пользовательские)
+            const allIcons = customIcons;
+            
+            // Группы сайтов (изначально пустые)
+            const [siteGroups, setSiteGroups] = useState(() => {
+                const saved = localStorage.getItem('siteGroups');
+                return saved ? JSON.parse(saved) : [];
+            });
+            
+            // Вкладки (динамические, основанные на группах)
+            const tabs = [
+                { id: 'all', name: 'Все', icon: 'th' },
+                ...siteGroups.map(group => ({
+                    id: group.id,
+                    name: group.name,
+                    icon: group.icon
+                }))
+            ];
+            
+            // Переключение темы
+            useEffect(() => {
+                if (darkMode) {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+            }, [darkMode]);
+            
+            // Сохранение данных в localStorage
+            useEffect(() => {
+                localStorage.setItem('siteGroups', JSON.stringify(siteGroups));
+                localStorage.setItem('customIcons', JSON.stringify(customIcons));
+            }, [siteGroups, customIcons]);
+            
+            // Обновление времени
+            useEffect(() => {
+                const updateTime = () => {
+                    const now = new Date();
+                    setCurrentTime(now.toLocaleTimeString('ru-RU', { 
+                        hour: '2-digit', 
+                        minute: '2-digit'
+                    }));
+                    
+                    setCurrentDate(now.toLocaleDateString('ru-RU', { 
+                        day: 'numeric', 
+                        month: 'long'
+                    }));
+                };
+                
+                updateTime();
+                const timer = setInterval(updateTime, 1000);
+                
+                return () => clearInterval(timer);
+            }, []);
+            
+            // Фильтрация групп по активной вкладке
+            const filteredGroups = siteGroups.filter(group => {
+                if (activeTab === 'all') return true;
+                return group.id === activeTab;
+            });
+            
+            // Обработчик клика по сайту
+            const handleSiteClick = (url) => {
+                window.open(url, '_blank');
+            };
+            
+            // Генерация ID
+            const generateId = () => {
+                return Math.random().toString(36).substr(2, 9);
+            };
+            
+            // Открытие формы добавления группы
+            const openAddGroupForm = () => {
+                setGroupForm({
+                    name: '',
+                    icon: 'globe',
+                    color: groupColors[0]
+                });
+                setEditingGroup(null);
+                setShowGroupModal(true);
+            };
+            
+            // Открытие формы редактирования группы
+            const openEditGroupForm = (group) => {
+                setGroupForm({
+                    name: group.name,
+                    icon: group.icon,
+                    color: group.color
+                });
+                setEditingGroup(group);
+                setShowGroupModal(true);
+            };
+            
+            // Сохранение группы
+            const saveGroup = () => {
+                if (!groupForm.name.trim()) return;
+                
+                if (editingGroup) {
+                    // Редактирование существующей группы
+                    setSiteGroups(siteGroups.map(g => 
+                        g.id === editingGroup.id ? { ...g, ...groupForm } : g
+                    ));
+                } else {
+                    // Добавление новой группы
+                    const newGroup = {
+                        id: generateId(),
+                        ...groupForm,
+                        sites: []
+                    };
+                    setSiteGroups([...siteGroups, newGroup]);
+                }
+                
+                setShowGroupModal(false);
+            };
+            
+            // Удаление группы
+            const deleteGroup = (groupId) => {
+                if (confirm('Вы уверены, что хотите удалить эту группу и все сайты в ней?')) {
+                    setSiteGroups(siteGroups.filter(g => g.id !== groupId));
+                    if (activeTab === groupId) setActiveTab('all');
+                }
+            };
+            
+            // Открытие формы добавления сайта
+            const openAddSiteForm = (groupId) => {
+                setSiteForm({
+                    name: '',
+                    url: '',
+                    icon: 'globe'
+                });
+                setEditingSite(null);
+                setSelectedGroup(groupId);
+                setShowSiteModal(true);
+            };
+            
+            // Открытие формы редактирования сайта
+            const openEditSiteForm = (site, groupId) => {
+                setSiteForm({
+                    name: site.name,
+                    url: site.url,
+                    icon: site.icon
+                });
+                setEditingSite(site);
+                setSelectedGroup(groupId);
+                setShowSiteModal(true);
+            };
+            
+            // Сохранение сайта
+            const saveSite = () => {
+                if (!siteForm.name.trim() || !siteForm.url.trim()) return;
+                
+                const groupIndex = siteGroups.findIndex(g => g.id === selectedGroup);
+                if (groupIndex === -1) return;
+                
+                const updatedGroups = [...siteGroups];
+                
+                if (editingSite) {
+                    // Редактирование существующего сайта
+                    updatedGroups[groupIndex].sites = updatedGroups[groupIndex].sites.map(s => 
+                        s.id === editingSite.id ? { ...s, ...siteForm } : s
+                    );
+                } else {
+                    // Добавление нового сайта
+                    const newSite = {
+                        id: generateId(),
+                        ...siteForm
+                    };
+                    updatedGroups[groupIndex].sites = [...updatedGroups[groupIndex].sites, newSite];
+                }
+                
+                setSiteGroups(updatedGroups);
+                setShowSiteModal(false);
+            };
+            
+            // Удаление сайта
+            const deleteSite = (siteId, groupId) => {
+                if (confirm('Вы уверены, что хотите удалить этот сайт?')) {
+                    setSiteGroups(siteGroups.map(g => 
+                        g.id === groupId 
+                            ? { ...g, sites: g.sites.filter(s => s.id !== siteId) } 
+                            : g
+                    ));
+                }
+            };
+            
+            // Добавление пользовательской иконки
+            const addCustomIcon = () => {
+                if (!newCustomIcon.trim()) return;
+                
+                if (!allIcons.includes(newCustomIcon.trim())) {
+                    setCustomIcons([...customIcons, newCustomIcon.trim()]);
+                    setNewCustomIcon('');
+                } else {
+                    alert('Эта иконка уже существует');
+                }
+            };
+            
+            // Удаление пользовательской иконки
+            const removeCustomIcon = (icon) => {
+                const updatedCustomIcons = customIcons.filter(i => i !== icon);
+                setCustomIcons(updatedCustomIcons);
+        
+                localStorage.setItem('customIcons', JSON.stringify(updatedCustomIcons));
+            };
+            
+            // Получение иконки по имени
+            const getIcon = (iconName) => {
+                if (iconName.startsWith('fab fa-')) {
+                    return <i className={`fab ${iconName} text-xl`}></i>;
+                }
+                return <i className={`fas fa-${iconName} text-xl`}></i>;
+            };
+            
+            // Рендеринг модального окна группы
+            const renderGroupModal = () => {
+                return (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                        <div className="settings-panel w-full max-w-md">
+                            <h2 className="text-xl font-semibold mb-4">
+                                {editingGroup ? 'Редактировать группу' : 'Добавить группу'}
+                            </h2>
+                            
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block mb-1">Название группы</label>
+                                    <input
+                                        type="text"
+                                        value={groupForm.name}
+                                        onChange={(e) => setGroupForm({...groupForm, name: e.target.value})}
+                                        className="w-full p-3 rounded-xl bg-slate-100 dark:bg-dark-700 border border-transparent focus:border-primary-500 outline-none"
+                                        placeholder="Мои сайты"
+                                    />
+                                </div>
+                                
+                                <div>
+                                    <label className="block mb-1">Цвет группы</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {groupColors.map(color => (
+                                            <button
+                                                key={color}
+                                                className={`w-8 h-8 rounded-full ${color.replace('text', 'bg')} ${groupForm.color === color ? 'ring-2 ring-offset-2 ring-primary-500' : ''}`}
+                                                onClick={() => setGroupForm({...groupForm, color})}
+                                            ></button>
+                                        ))}
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <div className="flex justify-between items-center mb-1">
+                                        <label>Иконка группы</label>
+                                        <button 
+                                            className="text-sm text-primary-500 hover:text-primary-600"
+                                            onClick={() => {
+                                                setShowGroupModal(false);
+                                                setShowIconManager(true);
+                                            }}
+                                        >
+                                            Управление иконками
+                                        </button>
+                                    </div>
+                                    <div className="grid grid-cols-3 max-w-2xl gap-2 max-h-40 overflow-y-auto p-2">
+                                        {allIcons.map(icon => (
+                                            <button
+                                                key={icon}
+                                                className={`p-2 rounded-lg flex flex-col items-center ${groupForm.icon === icon ? 'bg-primary-500 text-white' : 'bg-slate-100 dark:bg-dark-700'}`}
+                                                onClick={() => setGroupForm({...groupForm, icon})}
+                                                title={icon}
+                                            >
+                                                {getIcon(icon)}
+                                                <span className="text-xs mt-1 truncate w-full">{icon}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                
+                                <div className="flex justify-end gap-3 pt-4">
+                                    <button
+                                        className="px-4 py-2 rounded-xl bg-slate-200 dark:bg-dark-700 hover:bg-slate-300 dark:hover:bg-dark-700"
+                                        onClick={() => setShowGroupModal(false)}
+                                    >
+                                        Отмена
+                                    </button>
+                                    <button
+                                        className="px-4 py-2 rounded-xl bg-primary-500 text-white hover:bg-primary-600"
+                                        onClick={saveGroup}
+                                    >
+                                        Сохранить
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+            
+            // Рендеринг модального окна сайта
+            const renderSiteModal = () => {
+                return (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                        <div className="settings-panel w-full max-w-md">
+                            <h2 className="text-xl font-semibold mb-4">
+                                {editingSite ? 'Редактировать сайт' : 'Добавить сайт'}
+                            </h2>
+                            
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block mb-1">Название сайта</label>
+                                    <input
+                                        type="text"
+                                        value={siteForm.name}
+                                        onChange={(e) => setSiteForm({...siteForm, name: e.target.value})}
+                                        className="w-full p-3 rounded-xl bg-slate-100 dark:bg-dark-700 border border-transparent focus:border-primary-500 outline-none"
+                                        placeholder="Google"
+                                    />
+                                </div>
+                                
+                                <div>
+                                    <label className="block mb-1">URL сайта</label>
+                                    <input
+                                        type="text"
+                                        value={siteForm.url}
+                                        onChange={(e) => setSiteForm({...siteForm, url: e.target.value})}
+                                        className="w-full p-3 rounded-xl bg-slate-100 dark:bg-dark-700 border border-transparent focus:border-primary-500 outline-none"
+                                        placeholder="https://google.com"
+                                    />
+                                </div>
+                                
+                                <div>
+                                    <div className="flex justify-between items-center mb-1">
+                                        <label>Иконка сайта</label>
+                                        <button 
+                                            className="text-sm text-primary-500 hover:text-primary-600"
+                                            onClick={() => {
+                                                setShowSiteModal(false);
+                                                setShowIconManager(true);
+                                            }}
+                                        >
+                                            Управление иконками
+                                        </button>
+                                    </div>
+                                    <div className="grid grid-cols-3 max-w-2xl gap-2 max-h-40 overflow-y-auto p-2">
+                                        {allIcons.map(icon => (
+                                            <button
+                                                key={icon}
+                                                className={`p-2 rounded-lg flex flex-col items-center ${siteForm.icon === icon ? 'bg-primary-500 text-white' : 'bg-slate-100 dark:bg-dark-700'}`}
+                                                onClick={() => setSiteForm({...siteForm, icon})}
+                                                title={icon}
+                                            >
+                                                {getIcon(icon)}
+                                                <span className="text-xs mt-1 truncate w-full">{icon}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                
+                                <div className="flex justify-end gap-3 pt-4">
+                                    <button
+                                        className="px-4 py-2 rounded-xl bg-slate-200 dark:bg-dark-700 hover:bg-slate-300 dark:hover:bg-dark-700"
+                                        onClick={() => setShowSiteModal(false)}
+                                    >
+                                        Отмена
+                                    </button>
+                                    <button
+                                        className="px-4 py-2 rounded-xl bg-primary-500 text-white hover:bg-primary-600"
+                                        onClick={saveSite}
+                                    >
+                                        Сохранить
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+            
+            // Рендеринг менеджера иконок
+            const renderIconManager = () => {
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+            <div className="settings-panel w-full max-w-2xl icon-manager-container">
+                <div className="icon-manager-header">
+                    <div className="flex items-center justify-between mb-6">
+                        <h2 className="text-xl font-semibold">Управление иконками</h2>
+                        <button 
+                            className="p-2"
+                            onClick={() => setShowIconManager(false)}
+                        >
+                            <i className="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div className="icon-manager-content">
+                    <div className="icon-manager-form mb-6">
+                        <h3 className="text-lg font-medium mb-3">Добавить новую иконку</h3>
+                        <div className="flex flex-col gap-2">
+                            <input
+                                type="text"
+                                value={newCustomIcon}
+                                onChange={(e) => setNewCustomIcon(e.target.value)}
+                                placeholder="Название иконки (например: car)"
+                                className="flex-1 p-3 rounded-xl bg-slate-100 dark:bg-dark-700 border border-transparent focus:border-primary-500 outline-none"
+                            />
+                            <button 
+                                className="bg-primary-500 text-white p-3 px-4 rounded-xl hover:bg-primary-600"
+                                onClick={addCustomIcon}
+                            >
+                                Добавить
+                            </button>
+                        </div>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+                            Используйте названия иконок из Font Awesome. Пример: "car", "plane", "music".
+                            Для брендов добавьте префикс "fab fa-", например: "fab fa-google".
+                        </p>
+                    </div>
+                    
+                    <div className="mb-4 overflow-y-auto">
+                        <h3 className="text-lg font-medium mb-3">Все иконки</h3>
+                        <div className="icon-manager-scroll-container dark:border-slate-700 rounded-lg">
+                            <div className="icon-manager-grid">
+                                {allIcons.map(icon => (
+                                    <div key={icon} className="relative icon-grid-item">
+                                        <div className="icon-grid-item-icon">
+                                            {getIcon(icon)}
+                                        </div>
+                                        <div className="icon-grid-item-name">
+                                            {icon}
+                                        </div>
+                                        <button 
+                                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center"
+                                            onClick={() => removeCustomIcon(icon)}
+                                            title="Удалить иконку"
+                                        >
+                                            <i className="fas fa-times text-xs"></i>
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div className="icon-manager-footer">
+                    <div className="flex justify-end pt-4">
+                        <button
+                            className="px-4 py-2 rounded-xl bg-primary-500 text-white hover:bg-primary-600"
+                            onClick={() => setShowIconManager(false)}
+                        >
+                            Готово
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+            // Рендеринг настроек
+            const renderSettings = () => {
+                return (
+                    <div className="max-w-3xl mx-auto">
+                        <div className="flex items-center justify-between mb-8">
+                            <h1 className="text-3xl font-bold">Настройки</h1>
+                            <button 
+                                className="p-3 rounded-full bg-slate-200 dark:bg-dark-700 hover:bg-slate-300 dark:hover:bg-dark-700"
+                                onClick={() => setShowSettings(false)}
+                            >
+                                <i className="fas fa-times text-xl"></i>
+                            </button>
+                        </div>
+                        
+                        <div className="settings-panel mb-6">
+                            <h2 className="text-xl font-semibold mb-4 flex items-center gap-3">
+                                <i className="fas fa-paint-brush"></i> Внешний вид
+                            </h2>
+                            
+                            <div className="flex items-center justify-between py-3">
+                                <div className="flex items-center gap-3">
+                                    {darkMode ? <i className="fas fa-moon"></i> : <i className="fas fa-sun"></i>}
+                                    <span>{darkMode ? 'Темная тема' : 'Светлая тема'}</span>
+                                </div>
+                                <label className="flex items-center cursor-pointer">
+                                    <input 
+                                        type="checkbox" 
+                                        className="hidden" 
+                                        checked={darkMode}
+                                        onChange={() => setDarkMode(!darkMode)}
+                                    />
+                                    <div className="toggle-switch"></div>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div className="settings-panel mb-6">
+                  <h2 className="text-xl font-semibold mb-4 flex items-center gap-3">
+                    <i className="fas fa-city"></i> Локация
+                  </h2>
+                  
+                  <div className="mb-4">
+                    <label className="block mb-2 font-medium">Ваш город</label>
+                    <div className="flex flex-col">
+                      {/* Основные города */}
+                      {cities.map(c => (
+                        <button
+                          key={c}
+                          className={`py-3 px-4 rounded-xl text-center mt-2 ${
+                            city === c 
+                              ? 'bg-primary-500 text-white' 
+                              : 'bg-slate-100 dark:bg-dark-600 hover:bg-slate-200 dark:hover:bg-dark-500'
+                          }`}
+                          onClick={() => setCity(c)}
+                        >
+                          {c}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                        <div className="settings-panel">
+                            <h2 className="text-xl font-semibold mb-4 flex items-center gap-3">
+                                <i className="fas fa-layer-group"></i> Группы сайтов
+                            </h2>
+                            
+                            <div className="flex flex-col gap-3 mb-4">
+                                <button 
+                                    className="flex items-center gap-2 bg-primary-500 text-white p-3 px-4 rounded-xl hover:bg-primary-600"
+                                    onClick={openAddGroupForm}
+                                >
+                                    <i className="fas fa-plus"></i>
+                                    <span>Добавить группу</span>
+                                </button>
+                                
+                                <button 
+                                    className="flex items-center gap-2 bg-slate-200 dark:bg-dark-700 p-3 px-4 rounded-xl hover:bg-slate-300 dark:hover:bg-dark-700"
+                                    onClick={() => setShowIconManager(true)}
+                                >
+                                    <i className="fas fa-icons"></i>
+                                    <span>Управление иконками</span>
+                                </button>
+                            </div>
+                            
+                            <div className="space-y-4">
+                                {siteGroups.map(group => (
+                                    <div key={group.id} className="p-4 rounded-xl bg-slate-100 dark:bg-dark-700">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <div className="flex items-center gap-3">
+                                                <div className={group.color}>
+                                                    {getIcon(group.icon)}
+                                                </div>
+                                                <h3 className="font-semibold text-lg">{group.name}</h3>
+                                            </div>
+                                            
+                                            <div className="flex mt-2 gap-2">
+                                                <button 
+                                                    className="flex items-center justify-center p-2 w-8 h-8 rounded-lg bg-slate-200 dark:bg-dark-700 hover:bg-slate-300 dark:hover:bg-dark-700"
+                                                    onClick={() => openEditGroupForm(group)}
+                                                >
+                                                    <i className="fas fa-pen"></i>
+                                                </button>
+                                                <button 
+                                                    className="flex items-center justify-center p-2 w-8 h-8 rounded-lg bg-red-500 text-white hover:bg-red-600"
+                                                    onClick={() => deleteGroup(group.id)}
+                                                >
+                                                    <i className="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="flex flex-wrap gap-2">
+                                            {group.sites.map(site => (
+                                                <div key={site.id} className="flex items-center gap-2 bg-white dark:bg-dark-700 px-3 py-2 rounded-lg">
+                                                    <div
+                                                        className="flex items-center gap-3"
+                                                        onClick={() => openEditSiteForm(site, group.id)}
+                                                    >
+                                                        <div className={group.color}>
+                                                            {getIcon(site.icon)}
+                                                        </div>
+                                                        <span>{site.name}</span>
+                                                    </div>
+                                                    <div className="flex">
+                                                        <button
+                                                            className="flex items-center justify-center w-5 h-5 text-red-500 hover:text-red-500 text-md"
+                                                            onClick={() => deleteSite(site.id, group.id)}
+                                                        >
+                                                            <i className="fas fa-times"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            <button
+                                                className="flex ml-2 items-center gap-2 text-sm text-primary-500 hover:text-primary-600"
+                                                onClick={() => openAddSiteForm(group.id)}
+                                            >
+                                                <i className="fas fa-plus"></i>
+                                            </button>
+                                        </div>
+                                        
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+            
+            // Рендеринг основной страницы
+            const renderMainPage = () => {
+                return (
+                    <>
+                        <header className="flex flex-col md:flex-row justify-between items-center gap-5 py-5 mb-8">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-primary-500 rounded-xl flex items-center justify-center">
+                                    <i className="fas fa-rocket text-white"></i>
+                                </div>
+                                <h1 className="text-2xl font-bold text-primary-500">SmartStart</h1>
+                            </div>
+                            
+                            <div className="flex items-center gap-5 panel rounded-2xl px-6 py-3 no-select">
+                                <div className="text-2xl font-semibold tracking-tight">{currentTime}</div>
+                                <div 
+                                    className="flex flex-col items-center cursor-pointer py-2 px-4 rounded-xl hover:bg-slate-200/50 dark:hover:bg-dark-700 transition-colors"
+                                    onClick={() => setShowWeather(!showWeather)}
+                                >
+                                    {showWeather ? (
+                                        <div className="flex items-center gap-2 text-xl">
+                                            <i className="fas fa-sun text-yellow-500"></i>
+                                            <span>{weatherData.temp}°C</span>
+                                        </div>
+                                    ) : (
+                                        <div className="text-lg font-medium">{currentDate}</div>
+                                    )}
+                                    <div className="text-sm mt-1 opacity-80">{city}</div>
+                                </div>
+                            </div>
+                            
+                            <div className="flex gap-3">
+                                <button 
+                                    className="flex items-center gap-2 p-3 rounded-xl panel hover:bg-slate-200/50 dark:hover:bg-dark-700"
+                                    onClick={() => setDarkMode(!darkMode)}
+                                >
+                                    {darkMode ? (
+                                        <i className="fas fa-sun text-xl"></i>
+                                    ) : (
+                                        <i className="fas fa-moon text-xl"></i>
+                                    )}
+                                    <span>Сменить тему</span>
+                                </button>
+                                <button 
+                                    className="flex items-center gap-2 p-3 rounded-xl panel hover:bg-slate-200/50 dark:hover:bg-dark-700"
+                                    onClick={() => setShowSettings(true)}
+                                >
+                                    <i className="fas fa-cog text-xl"></i>
+                                    <span>Настройки</span>
+                                </button>
+                            </div>
+                        </header>
+                        
+                        <div className="flex flex-col gap-1 mb-6 p-1 rounded-xl panel overflow-x-auto scrollbar-hide">
+                            <div className="flex gap-1 overflow-x-auto">
+                                {tabs.map(tab => (
+                                    <button 
+                                        key={tab.id}
+                                        className={`flex items-center gap-2 py-3 px-5 rounded-xl whitespace-nowrap ${
+                                            activeTab === tab.id 
+                                                ? 'bg-primary-500/20 text-primary-500' 
+                                                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-dark-700'
+                                        }`}
+                                        onClick={() => setActiveTab(tab.id)}
+                                    >
+                                        {getIcon(tab.icon)}
+                                        <span>{tab.name}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        
+                        {siteGroups.length === 0 ? (
+                            <div className="text-center py-16">
+                                <p className="text-lg mb-4">У вас пока нет ни одной группы сайтов</p>
+                                <button 
+                                    className="bg-primary-500 text-white px-6 py-3 rounded-xl hover:bg-primary-600"
+                                    onClick={() => setShowSettings(true)}
+                                >
+                                    <i className="fas fa-plus mr-2"></i>
+                                    Создать первую группу
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="space-y-6">
+                                {filteredGroups.map(group => (
+                                    <div key={group.id} className="animate-fadeIn">
+                                        <div className="flex items-center gap-3 mb-3 ml-2">
+                                            <div className={group.color}>
+                                                {getIcon(group.icon)}
+                                            </div>
+                                            <h2 className="text-xl font-semibold pl-3">{group.name}</h2>
+                                        </div>
+                                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 gap-3">
+                                            {group.sites.map(site => (
+                                                <a 
+                                                    key={site.id}
+                                                    className="site-item flex flex-col items-center gap-1 p-3 rounded-2xl panel cursor-pointer" 
+                                                    onClick={() => handleSiteClick(site.url)}
+                                                >
+                                                    <div className={`w-10 h-10 rounded-xl ${group.color} bg-opacity-20 flex items-center justify-center`}>
+                                                        <span className="text-lg">
+                                                            {getIcon(site.icon)}
+                                                        </span>
+                                                    </div>
+                                                    <div className="text-xs font-medium text-center">{site.name}</div>
+                                                </a>
+                                            ))}
+                                            
+                                            <div 
+                                                className="site-item flex flex-col items-center gap-1 p-3 rounded-2xl panel cursor-pointer hover:bg-primary-100 dark:hover:bg-dark-700"
+                                                onClick={() => openAddSiteForm(group.id)}
+                                            >
+                                                <div className="w-10 h-10 rounded-xl bg-slate-200 dark:bg-dark-600 flex items-center justify-center">
+                                                    <i className="fas fa-plus text-lg"></i>
+                                                </div>
+                                                <div className="text-xs font-medium">Добавить</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        
+                        <footer className="mt-16 text-center text-slate-500 dark:text-slate-500 text-sm">
+                            <p>Настроено с помощью SmartStart • {new Date().getFullYear()}</p>
+                        </footer>
+                    </>
+                );
+            };
+            
+            return (
+                <div className="max-w-6xl mx-auto">
+                    {showSettings ? renderSettings() : renderMainPage()}
+                    {showGroupModal && renderGroupModal()}
+                    {showSiteModal && renderSiteModal()}
+                    {showIconManager && renderIconManager()}
+                </div>
+            );
+        }
+
+        // Рендеринг приложения
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
