@@ -21,9 +21,11 @@
                         },
                         secondary: '#8b5cf6',
                         dark: {
-                            900: '#0f172a',
-                            800: '#1e293b',
-                            700: '#334155'
+                            900: '#121212',  // Самый темный (почти черный)
+                            800: '#1e1e1e',  // Темно-серый
+                            700: '#2d2d2d',  // Серый
+                            600: '#3d3d3d',  // Средне-серый
+                            500: '#4d4d4d'   // Светло-серый
                         },
                         light: '#e2e8f0',
                         accent: '#c7d2fe'
@@ -76,7 +78,7 @@
             }
 
             .panel {
-                @apply bg-white dark:bg-dark-800 border border-slate-300 dark:border-slate-700 shadow-xl;
+                @apply bg-white dark:bg-dark-800 border border-slate-300 dark:border-dark-700 shadow-xl;
             }
             
             .icon-grid-item {
@@ -130,8 +132,14 @@
                 @apply bg-slate-300 dark:bg-dark-700 rounded hover:bg-slate-400 dark:hover:bg-dark-700;
             }
 
-            .no-scroll {
+            .scrollbar-width-none {
                 scrollbar-with: none;
+                -ms-overflow-style: none;
+            }
+            .scrollbar-width-none::-webkit-scrollbar {
+                scrollbar-with: none;
+                -ms-overflow-style: none;
+
             }
 
             .icon-grid {
@@ -169,6 +177,42 @@
                 'Новосибирск', 'Казань', 'Сочи'
             ]);
             
+            useEffect(() => {
+                const config = tailwind.config;
+
+                if (!config || !config.theme?.extend?.colors?.dark) {
+                    console.error('Конфиг Tailwind не найден или dark цвета не определены');
+                } else {
+                    const definedShades = Object.keys(config.theme.extend.colors.dark);
+                    let errorCount = 0;
+
+                    document.querySelectorAll('*').forEach(element => {
+                        element.classList.forEach(className => {
+                            // Поиск всех вхождений dark-число в классах
+                            const match = className.match(/dark-(\d+)/);
+                            if (match) {
+                                const shade = match[1];
+                                if (!definedShades.includes(shade)) {
+                                    console.error(`Неопределенный dark оттенок: ${shade}`, element);
+                                    errorCount++;
+                                }
+                            }
+                        });
+                    });
+
+                    if (errorCount === 0) {
+                        console.log('✅ Все dark классы корректны');
+                    } else {
+                        console.log(`❌ Найдено ${errorCount} ошибок с dark классами`);
+                    }
+                }   
+            }, [
+                showSettings,
+                showGroupModal,
+                showSiteModal,
+                showIconManager
+            ]);
+
             // Формы
             const [groupForm, setGroupForm] = useState({
                 name: '',
@@ -221,11 +265,13 @@
             // Вкладки (динамические, основанные на группах)
             const tabs = [
                 { id: 'all', name: 'Все', icon: 'th' },
-                ...siteGroups.map(group => ({
-                    id: group.id,
-                    name: group.name,
-                    icon: group.icon
-                }))
+                ...(siteGroups.length >= 2 
+                    ? siteGroups.map(group => ({
+                        id: group.id,
+                        name: group.name,
+                        icon: group.icon
+                    })) 
+                    : [])
             ];
             
             // Переключение темы
@@ -437,7 +483,7 @@
                                         type="text"
                                         value={groupForm.name}
                                         onChange={(e) => setGroupForm({...groupForm, name: e.target.value})}
-                                        className="w-full p-3 rounded-xl bg-slate-100 dark:bg-dark-700 border border-transparent focus:border-primary-500 outline-none"
+                                        className="w-full p-3 rounded-xl bg-slate-100 dark:bg-dark-600 border border-transparent focus:border-primary-500 outline-none"
                                         placeholder="Мои сайты"
                                     />
                                 </div>
@@ -448,7 +494,7 @@
                                         {groupColors.map(color => (
                                             <button
                                                 key={color}
-                                                className={`w-8 h-8 rounded-full ${color.replace('text', 'bg')} ${groupForm.color === color ? 'ring-2 ring-offset-2 ring-primary-500' : ''}`}
+                                                className={`w-8 h-8 rounded-full ${color.replace('text', 'bg')} ${groupForm.color === color ? 'ring-2 ring-offset-[0.3px] ring-white' : ''}`}
                                                 onClick={() => setGroupForm({...groupForm, color})}
                                             ></button>
                                         ))}
@@ -459,7 +505,7 @@
                                     <div className="flex justify-between items-center mb-1">
                                         <label>Иконка группы</label>
                                         <button 
-                                            className="text-sm p-2 bg-slate-100 rounded-lg text-primary-500 hover:text-primary-600"
+                                            className="text-sm p-2 bg-slate-100 dark:bg-dark-800 rounded-lg text-dark-700 dark:text-white font-medium"
                                             onClick={() => {
                                                 setShowGroupModal(false);
                                                 setShowIconManager(true);
@@ -519,7 +565,7 @@
                                         type="text"
                                         value={siteForm.name}
                                         onChange={(e) => setSiteForm({...siteForm, name: e.target.value})}
-                                        className="w-full p-3 rounded-xl bg-slate-100 dark:bg-dark-700 border border-transparent focus:border-primary-500 outline-none"
+                                        className="w-full p-3 rounded-xl bg-slate-100 dark:bg-dark-600 border border-transparent focus:border-primary-500 outline-none"
                                         placeholder="Google"
                                     />
                                 </div>
@@ -530,7 +576,7 @@
                                         type="text"
                                         value={siteForm.url}
                                         onChange={(e) => setSiteForm({...siteForm, url: e.target.value})}
-                                        className="w-full p-3 rounded-xl bg-slate-100 dark:bg-dark-700 border border-transparent focus:border-primary-500 outline-none"
+                                        className="w-full p-3 rounded-xl bg-slate-100 dark:bg-dark-600 border border-transparent focus:border-primary-500 outline-none"
                                         placeholder="https://google.com"
                                     />
                                 </div>
@@ -539,7 +585,7 @@
                                     <div className="flex justify-between items-center mb-1">
                                         <label>Иконка сайта</label>
                                         <button 
-                                            className="text-sm p-2 bg-slate-100 rounded-lg text-primary-500 hover:text-primary-600"
+                                            className="text-sm p-2 bg-slate-100 dark:bg-dark-800 rounded-lg text-dark-700 dark:text-white font-medium"
                                             onClick={() => {
                                                 setShowSiteModal(false);
                                                 setShowIconManager(true);
@@ -609,7 +655,7 @@
                                 value={newCustomIcon}
                                 onChange={(e) => setNewCustomIcon(e.target.value)}
                                 placeholder="Название иконки (например: car)"
-                                className="flex-1 p-3 rounded-xl bg-slate-100 dark:bg-dark-700 border border-transparent focus:border-primary-500 outline-none"
+                                className="flex-1 p-3 rounded-xl bg-slate-100 dark:bg-dark-600 border border-transparent focus:border-primary-500 outline-none"
                             />
                             <button 
                                 className="bg-primary-500 text-white p-3 px-4 rounded-xl hover:bg-primary-600"
@@ -702,30 +748,30 @@
                         </div>
                         
                         <div className="settings-panel mb-6">
-                  <h2 className="text-xl font-semibold mb-4 flex items-center gap-3">
-                    <i className="fas fa-city"></i> Локация
-                  </h2>
-                  
-                  <div className="mb-4">
-                    <label className="block mb-2 font-medium">Ваш город</label>
-                    <div className="flex flex-col">
-                      {/* Основные города */}
-                      {cities.map(c => (
-                        <button
-                          key={c}
-                          className={`py-3 px-4 rounded-xl text-center mt-2 ${
-                            city === c 
-                              ? 'bg-primary-500 text-white' 
-                              : 'bg-slate-100 dark:bg-dark-600 hover:bg-slate-200 dark:hover:bg-dark-500'
-                          }`}
-                          onClick={() => setCity(c)}
-                        >
-                          {c}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                          <h2 className="text-xl font-semibold mb-4 flex items-center gap-3">
+                            <i className="fas fa-city"></i> Локация
+                          </h2>
+                          
+                          <div className="mb-4">
+                            <label className="block mb-2 font-medium">Ваш город</label>
+                            <div className="flex flex-col">
+                              {/* Основные города */}
+                              {cities.map(c => (
+                                <button
+                                  key={c}
+                                  className={`py-3 px-4 rounded-xl text-center mt-2 ${
+                                    city === c 
+                                      ? 'bg-primary-500 text-white' 
+                                      : 'bg-slate-100 dark:bg-dark-600'
+                                  }`}
+                                  onClick={() => setCity(c)}
+                                >
+                                  {c}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
 
                         <div className="settings-panel">
                             <h2 className="text-xl font-semibold mb-4 flex items-center gap-3">
@@ -742,7 +788,7 @@
                                 </button>
                                 
                                 <button 
-                                    className="flex items-center gap-2 bg-slate-200 dark:bg-dark-700 p-3 px-4 rounded-xl hover:bg-slate-300 dark:hover:bg-dark-700"
+                                    className="flex items-center gap-2 bg-slate-200 dark:bg-dark-800 p-3 px-4 rounded-xl hover:bg-slate-300 dark:hover:bg-dark-700"
                                     onClick={() => setShowIconManager(true)}
                                 >
                                     <i className="fas fa-icons"></i>
@@ -752,7 +798,7 @@
                             
                             <div className="space-y-4">
                                 {siteGroups.map(group => (
-                                    <div key={group.id} className="p-4 rounded-xl bg-slate-100 dark:bg-dark-700">
+                                    <div key={group.id} className="p-4 rounded-xl bg-slate-100 dark:bg-dark-800">
                                         <div className="flex items-center justify-between mb-3">
                                             <div className="flex items-center gap-3">
                                                 <div className={group.color}>
@@ -791,7 +837,7 @@
                                                     </div>
                                                     <div className="flex">
                                                         <button
-                                                            className="flex items-center justify-center w-5 h-5 text-red-500 hover:text-red-500 text-md"
+                                                            className="flex items-center justify-center w-5 h-5 text-red-500 text-md"
                                                             onClick={() => deleteSite(site.id, group.id)}
                                                         >
                                                             <i className="fas fa-times"></i>
@@ -800,7 +846,7 @@
                                                 </div>
                                             ))}
                                             <button
-                                                className="flex items-center justify-center w-11 h-11 gap-2 text-sm bg-white rounded-lg text-primary-500 hover:text-primary-600"
+                                                className="flex items-center justify-center w-11 h-11 gap-2 text-sm bg-white dark:bg-dark-700 rounded-lg text-primary-500"
                                                 onClick={() => openAddSiteForm(group.id)}
                                             >
                                                 <i className="fas fa-plus"></i>
@@ -867,24 +913,26 @@
                             </div>
                         </header>
                         
-                        <div className="flex flex-col gap-1 mb-6 p-1 rounded-xl panel overflow-x-auto no-scroll">
-                            <div className="flex gap-1 overflow-x-auto no-scroll">
-                                {tabs.map(tab => (
-                                    <button 
-                                        key={tab.id}
-                                        className={`flex items-center gap-2 py-3 px-5 rounded-xl whitespace-nowrap ${
-                                            activeTab === tab.id 
-                                                ? 'bg-primary-500/20 text-primary-500' 
-                                                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-dark-700'
-                                        }`}
-                                        onClick={() => setActiveTab(tab.id)}
-                                    >
-                                        {getIcon(tab.icon)}
-                                        <span>{tab.name}</span>
-                                    </button>
-                                ))}
+                        {siteGroups.length > 0 && (
+                            <div className="flex flex-col gap-1 mb-6 p-1 rounded-xl panel overflow-x-auto scrollbar-width-none">
+                                <div className="flex gap-1 overflow-x-auto scrollbar-width-none">
+                                    {tabs.map(tab => (
+                                        <button 
+                                            key={tab.id}
+                                            className={`flex items-center gap-2 py-3 px-5 rounded-xl whitespace-nowrap ${
+                                                activeTab === tab.id 
+                                                    ? 'bg-primary-500/20 text-primary-500' 
+                                                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-dark-700'
+                                            }`}
+                                            onClick={() => setActiveTab(tab.id)}
+                                        >
+                                            {getIcon(tab.icon)}
+                                            <span>{tab.name}</span>
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
-                        </div>
+                        )}
                         
                         {siteGroups.length === 0 ? (
                             <div className="text-center py-16">
@@ -927,7 +975,7 @@
                                                 className="site-item flex flex-col items-center gap-1 p-3 rounded-2xl panel cursor-pointer hover:bg-primary-100 dark:hover:bg-dark-700"
                                                 onClick={() => openAddSiteForm(group.id)}
                                             >
-                                                <div className="w-10 h-10 rounded-xl bg-slate-200 dark:bg-dark-600 flex items-center justify-center">
+                                                <div className="w-10 h-10 rounded-xl bg-slate-200 dark:bg-dark-700 flex items-center justify-center">
                                                     <i className="fas fa-plus text-lg"></i>
                                                 </div>
                                                 <div className="text-xs font-medium">Добавить</div>
