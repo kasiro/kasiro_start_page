@@ -39,11 +39,13 @@
                 background-attachment: fixed;
             }
             .site-item {
-                @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-xl;
+                @apply hover:-translate-y-1 hover:shadow-xl;
             }
+            /*
             .tab {
                 @apply transition-all duration-300;
             }
+            */
             .no-select {
                 -webkit-user-select: none;
                 -moz-user-select: none;
@@ -128,6 +130,10 @@
                 @apply bg-slate-300 dark:bg-dark-700 rounded hover:bg-slate-400 dark:hover:bg-dark-700;
             }
 
+            .no-scroll {
+                scrollbar-with: none;
+            }
+
             .icon-grid {
                 @apply grid grid-cols-3 gap-3 p-2;
             }
@@ -144,7 +150,7 @@
         // Основной компонент приложения
         function App() {
             const [activeTab, setActiveTab] = useState('all');
-            const [showWeather, setShowWeather] = useState(true);
+            const [showWeather, setShowWeather] = useState(false);
             const [currentTime, setCurrentTime] = useState('');
             const [currentDate, setCurrentDate] = useState('');
             const [weatherData, setWeatherData] = useState({ temp: 22, condition: 'sunny' });
@@ -239,22 +245,21 @@
             
             // Обновление времени
             useEffect(() => {
+                const now = new Date();
                 const updateTime = () => {
-                    const now = new Date();
                     setCurrentTime(now.toLocaleTimeString('ru-RU', { 
                         hour: '2-digit', 
                         minute: '2-digit'
                     }));
-                    
-                    setCurrentDate(now.toLocaleDateString('ru-RU', { 
-                        day: 'numeric', 
-                        month: 'long'
-                    }));
                 };
                 
                 updateTime();
+                setCurrentDate(now.toLocaleDateString('ru-RU', { 
+                    day: 'numeric', 
+                    month: 'long'
+                }));
+
                 const timer = setInterval(updateTime, 1000);
-                
                 return () => clearInterval(timer);
             }, []);
             
@@ -454,7 +459,7 @@
                                     <div className="flex justify-between items-center mb-1">
                                         <label>Иконка группы</label>
                                         <button 
-                                            className="text-sm text-primary-500 hover:text-primary-600"
+                                            className="text-sm p-2 bg-slate-100 rounded-lg text-primary-500 hover:text-primary-600"
                                             onClick={() => {
                                                 setShowGroupModal(false);
                                                 setShowIconManager(true);
@@ -534,7 +539,7 @@
                                     <div className="flex justify-between items-center mb-1">
                                         <label>Иконка сайта</label>
                                         <button 
-                                            className="text-sm text-primary-500 hover:text-primary-600"
+                                            className="text-sm p-2 bg-slate-100 rounded-lg text-primary-500 hover:text-primary-600"
                                             onClick={() => {
                                                 setShowSiteModal(false);
                                                 setShowIconManager(true);
@@ -667,10 +672,10 @@
                         <div className="flex items-center justify-between mb-8">
                             <h1 className="text-3xl font-bold">Настройки</h1>
                             <button 
-                                className="p-3 rounded-full bg-slate-200 dark:bg-dark-700 hover:bg-slate-300 dark:hover:bg-dark-700"
+                                className="p-3"
                                 onClick={() => setShowSettings(false)}
                             >
-                                <i className="fas fa-times text-xl"></i>
+                                <i className="fas fa-times text-3xl"></i>
                             </button>
                         </div>
                         
@@ -795,7 +800,7 @@
                                                 </div>
                                             ))}
                                             <button
-                                                className="flex ml-2 items-center gap-2 text-sm text-primary-500 hover:text-primary-600"
+                                                className="flex items-center justify-center w-11 h-11 gap-2 text-sm bg-white rounded-lg text-primary-500 hover:text-primary-600"
                                                 onClick={() => openAddSiteForm(group.id)}
                                             >
                                                 <i className="fas fa-plus"></i>
@@ -862,8 +867,8 @@
                             </div>
                         </header>
                         
-                        <div className="flex flex-col gap-1 mb-6 p-1 rounded-xl panel overflow-x-auto scrollbar-hide">
-                            <div className="flex gap-1 overflow-x-auto">
+                        <div className="flex flex-col gap-1 mb-6 p-1 rounded-xl panel overflow-x-auto no-scroll">
+                            <div className="flex gap-1 overflow-x-auto no-scroll">
                                 {tabs.map(tab => (
                                     <button 
                                         key={tab.id}
