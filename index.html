@@ -40,10 +40,11 @@
                 @apply bg-slate-100 text-slate-800 dark:bg-dark-900 dark:text-slate-200 min-h-screen p-5 overflow-x-hidden;
                 background-attachment: fixed;
             }
-            .site-item {
-                @apply hover:-translate-y-1 hover:shadow-xl;
-            }
             /*
+            .site-item {
+                @apply hover/:-translate-y-1 hover/:shadow-xl;
+            }
+            
             .tab {
                 @apply transition-all duration-300;
             }
@@ -78,11 +79,11 @@
             }
 
             .panel {
-                @apply bg-white dark:bg-dark-800 border border-slate-300 dark:border-dark-700 shadow-xl;
+                @apply bg-white dark:bg-dark-700 rounded-2xl p-6 shadow-lg;
             }
             
             .icon-grid-item {
-               @apply p-3 rounded-lg flex flex-col items-center bg-slate-100 dark:bg-dark-700 hover:bg-slate-200 dark:hover:bg-dark-700;
+               @apply p-3 rounded-lg flex flex-col items-center bg-slate-100 dark:bg-dark-700;
             }
             .icon-grid-item-icon {
                 @apply text-2xl mb-2;
@@ -137,9 +138,7 @@
                 -ms-overflow-style: none;
             }
             .scrollbar-width-none::-webkit-scrollbar {
-                scrollbar-with: none;
-                -ms-overflow-style: none;
-
+                display: none;
             }
 
             .icon-grid {
@@ -163,7 +162,10 @@
             const [currentDate, setCurrentDate] = useState('');
             const [weatherData, setWeatherData] = useState({ temp: 22, condition: 'sunny' });
             const [city, setCity] = useState('Новосибирск');
-            const [darkMode, setDarkMode] = useState(false);
+            const [darkMode, setDarkMode] = useState(() => {
+                const saved = localStorage.getItem('darkMode');
+                return saved ? JSON.parse(saved) : false;
+            });
             const [showSettings, setShowSettings] = useState(false);
             const [showGroupModal, setShowGroupModal] = useState(false);
             const [showSiteModal, setShowSiteModal] = useState(false);
@@ -176,7 +178,16 @@
                 'Москва', 'Санкт-Петербург', 'Екатеринбург', 
                 'Новосибирск', 'Казань', 'Сочи'
             ]);
-            
+            const [searchQuery, setSearchQuery] = useState('');
+            const [searchEngine, setSearchEngine] = useState(() => {
+                const saved = localStorage.getItem('searchEngine');
+                return saved ? JSON.parse(saved) : {
+                    name: 'Google',
+                    url: 'https://www.google.com/search?q=%s'
+                };
+            });
+            const [customSearchUrl, setCustomSearchUrl] = useState('');
+                
             useEffect(() => {
                 const config = tailwind.config;
 
@@ -212,6 +223,28 @@
                 showSiteModal,
                 showIconManager
             ]);
+
+            useEffect(() => {
+                localStorage.setItem('searchEngine', JSON.stringify(searchEngine));
+            }, [searchEngine]);
+
+            // Обработчик поиска
+            const handleSearch = () => {
+                if (searchQuery.trim() === '') return;
+                
+                const encodedQuery = encodeURIComponent(searchQuery.trim());
+                const searchUrl = searchEngine.url.replace('%s', encodedQuery);
+                
+                window.open(searchUrl, '_blank');
+                setSearchQuery('');
+            };
+
+            // Обработчик нажатия клавиш в строке поиска
+            const handleSearchKeyDown = (e) => {
+                if (e.key === 'Enter') {
+                    handleSearch();
+                }
+            };
 
             // Формы
             const [groupForm, setGroupForm] = useState({
@@ -281,6 +314,7 @@
                 } else {
                     document.documentElement.classList.remove('dark');
                 }
+                localStorage.setItem('darkMode', JSON.stringify(darkMode));
             }, [darkMode]);
             
             // Сохранение данных в localStorage
@@ -773,6 +807,66 @@
                           </div>
                         </div>
 
+                        {/* Раздел для поисковой системы */}
+                        <div className="settings-panel mb-6">
+                            <h2 className="text-xl font-semibold mb-4 flex items-center gap-3">
+                                <i className="fas fa-search"></i> Поисковая система
+                            </h2>
+                            
+                            <div className="mb-4">
+                                <label className="block mb-2 font-medium">Выбрать поисковую систему</label>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {[
+                                        { name: 'Google', url: 'https://www.google.com/search?q=%s' },
+                                        { name: 'DuckDuckGo', url: 'https://duckduckgo.com/?q=%s' },
+                                        { name: 'Bing', url: 'https://www.bing.com/search?q=%s' },
+                                        { name: 'Яндекс', url: 'https://yandex.ru/search/?text=%s' }
+                                    ].map(engine => (
+                                        <button
+                                            key={engine.name}
+                                            className={`py-3 px-4 rounded-xl text-center ${
+                                                searchEngine.name === engine.name 
+                                                    ? 'bg-primary-500 text-white' 
+                                                    : 'bg-slate-100 dark:bg-dark-600'
+                                            }`}
+                                            onClick={() => setSearchEngine(engine)}
+                                        >
+                                            {engine.name}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label className="block mb-2 font-medium">Или введите свою (с %s для вставки запроса)</label>
+                                <div className="flex flex-col gap-2">
+                                    <input
+                                        type="text"
+                                        value={customSearchUrl}
+                                        onChange={(e) => setCustomSearchUrl(e.target.value)}
+                                        placeholder="https://example.com/search?q=%s"
+                                        className="flex-1 p-3 rounded-xl bg-slate-100 dark:bg-dark-600 border border-transparent focus:border-primary-500 outline-none"
+                                    />
+                                    <button
+                                        className="bg-primary-500 text-white p-3 rounded-xl hover:bg-primary-600"
+                                        onClick={() => {
+                                            if (customSearchUrl.includes('%s')) {
+                                                setSearchEngine({
+                                                    name: 'Кастомная',
+                                                    url: customSearchUrl
+                                                });
+                                                setCustomSearchUrl('');
+                                            } else {
+                                                alert('URL должен содержать %s для подстановки запроса');
+                                            }
+                                        }}
+                                    >
+                                        Сохранить
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
                         <div className="settings-panel">
                             <h2 className="text-xl font-semibold mb-4 flex items-center gap-3">
                                 <i className="fas fa-layer-group"></i> Группы сайтов
@@ -893,7 +987,7 @@
                             
                             <div className="flex gap-3">
                                 <button 
-                                    className="flex items-center gap-2 p-3 rounded-xl panel hover:bg-slate-200/50 dark:hover:bg-dark-700"
+                                    className="flex items-center gap-2 p-3 rounded-xl panel dark:hover:bg-dark-700"
                                     onClick={() => setDarkMode(!darkMode)}
                                 >
                                     {darkMode ? (
@@ -904,7 +998,7 @@
                                     <span>Сменить тему</span>
                                 </button>
                                 <button 
-                                    className="flex items-center gap-2 p-3 rounded-xl panel hover:bg-slate-200/50 dark:hover:bg-dark-700"
+                                    className="flex items-center gap-2 p-3 rounded-xl panel dark:hover:bg-dark-700"
                                     onClick={() => setShowSettings(true)}
                                 >
                                     <i className="fas fa-cog text-xl"></i>
@@ -913,6 +1007,20 @@
                             </div>
                         </header>
                         
+                        {/* Строка поиска */}
+                        <div className="mb-6">
+                            <div className="flex items-center rounded-lg overflow-hidden shadow-lg max-w-2xl mx-auto">
+                                <input
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    onKeyDown={handleSearchKeyDown}
+                                    placeholder={`Поиск в ${searchEngine.name}`}
+                                    className="flex-1 py-4 px-6 outline-none bg-white dark:bg-dark-700"
+                                />
+                            </div>
+                        </div>
+
                         {siteGroups.length > 0 && (
                             <div className="flex flex-col gap-1 mb-6 p-1 rounded-xl panel overflow-x-auto scrollbar-width-none">
                                 <div className="flex gap-1 overflow-x-auto scrollbar-width-none">
@@ -922,7 +1030,7 @@
                                             className={`flex items-center gap-2 py-3 px-5 rounded-xl whitespace-nowrap ${
                                                 activeTab === tab.id 
                                                     ? 'bg-primary-500/20 text-primary-500' 
-                                                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-dark-700'
+                                                    : 'text-dark-600 dark:text-slate-200'
                                             }`}
                                             onClick={() => setActiveTab(tab.id)}
                                         >
@@ -975,7 +1083,7 @@
                                                 className="site-item flex flex-col items-center gap-1 p-3 rounded-2xl panel cursor-pointer hover:bg-primary-100 dark:hover:bg-dark-700"
                                                 onClick={() => openAddSiteForm(group.id)}
                                             >
-                                                <div className="w-10 h-10 rounded-xl bg-slate-200 dark:bg-dark-700 flex items-center justify-center">
+                                                <div className="w-10 h-10 rounded-xl flex items-center justify-center">
                                                     <i className="fas fa-plus text-lg"></i>
                                                 </div>
                                                 <div className="text-xs font-medium">Добавить</div>
