@@ -238,6 +238,44 @@
                 window.open(searchUrl, '_blank');
                 setSearchQuery('');
             };
+            
+            const [draggingGroupId, setDraggingGroupId] = useState(null);
+            const [dragOverGroupId, setDragOverGroupId] = useState(null);
+
+            // Функции для перетаскивания групп
+            const handleDragStart = (e, groupId) => {
+                setDraggingGroupId(groupId);
+                e.dataTransfer.setData("text/plain", groupId);
+                e.dataTransfer.effectAllowed = "move";
+            };
+
+            const handleDragOver = (e, groupId) => {
+                e.preventDefault();
+                if (draggingGroupId !== groupId) {
+                    setDragOverGroupId(groupId);
+                }
+            };
+
+            const handleDragEnd = () => {
+                setDraggingGroupId(null);
+                setDragOverGroupId(null);
+            };
+
+            const handleDrop = (e, targetGroupId) => {
+                e.preventDefault();
+                if (draggingGroupId && draggingGroupId !== targetGroupId) {
+                    const groups = [...siteGroups];
+                    const dragIndex = groups.findIndex(g => g.id === draggingGroupId);
+                    const dropIndex = groups.findIndex(g => g.id === targetGroupId);
+                    
+                    // Перемещаем группу
+                    const [movedGroup] = groups.splice(dragIndex, 1);
+                    groups.splice(dropIndex, 0, movedGroup);
+                    
+                    setSiteGroups(groups);
+                }
+                setDragOverGroupId(null);
+            };
 
             // Обработчик нажатия клавиш в строке поиска
             const handleSearchKeyDown = (e) => {
@@ -892,7 +930,17 @@
                             
                             <div className="space-y-4">
                                 {siteGroups.map(group => (
-                                    <div key={group.id} className="p-4 rounded-xl bg-slate-100 dark:bg-dark-800">
+                                    <div
+                                    key={group.id}
+                                    className={`p-4 rounded-xl bg-slate-100 dark:bg-dark-800 relative
+                                        ${draggingGroupId === group.id ? 'opacity-50' : ''}
+                                        ${dragOverGroupId === group.id ? 'ring-2 ring-primary-500' : ''}`}
+                                    draggable
+                                    onDragStart={(e) => handleDragStart(e, group.id)}
+                                    onDragOver={(e) => handleDragOver(e, group.id)}
+                                    onDragEnd={handleDragEnd}
+                                    onDrop={(e) => handleDrop(e, group.id)}
+                                    >
                                         <div className="flex items-center justify-between mb-3">
                                             <div className="flex items-center gap-3">
                                                 <div className={group.color}>
