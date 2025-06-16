@@ -528,7 +528,7 @@
                                         {groupColors.map(color => (
                                             <button
                                                 key={color}
-                                                className={`w-8 h-8 rounded-full ${color.replace('text', 'bg')} ${groupForm.color === color ? 'ring-2 ring-offset-[0.3px] ring-white' : ''}`}
+                                                className={`w-8 h-8 rounded-full ${color.replace('text', 'bg')} ${groupForm.color === color ? 'ring-2 ring-offset-[0.3px] dark:ring-white ring-dark-700' : ''}`}
                                                 onClick={() => setGroupForm({...groupForm, color})}
                                             ></button>
                                         ))}
