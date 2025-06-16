@@ -443,10 +443,8 @@
             
             // Удаление группы
             const deleteGroup = (groupId) => {
-                if (confirm('Вы уверены, что хотите удалить эту группу и все сайты в ней?')) {
-                    setSiteGroups(siteGroups.filter(g => g.id !== groupId));
-                    if (activeTab === groupId) setActiveTab('all');
-                }
+                setSiteGroups(siteGroups.filter(g => g.id !== groupId));
+                if (activeTab === groupId) setActiveTab('all');
             };
             
             // Открытие формы добавления сайта
