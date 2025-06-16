@@ -227,6 +227,30 @@
             useEffect(() => {
                 localStorage.setItem('searchEngine', JSON.stringify(searchEngine));
             }, [searchEngine]);
+            
+            const scrollTabIntoView = (tabId) => {
+                const tabElement = document.getElementById(`tab-${tabId}`);
+                if (!tabElement) return;
+                
+                const container = tabElement.parentElement;
+                const containerRect = container.getBoundingClientRect();
+                const tabRect = tabElement.getBoundingClientRect();
+                
+                // Проверяем, видна ли вкладка полностью
+                const isFullyVisible = 
+                    tabRect.left >= containerRect.left && 
+                    tabRect.right <= containerRect.right;
+                
+                // Если вкладка не полностью видна, скроллим к ней
+                if (!isFullyVisible) {
+                    const scrollOptions = {
+                        left: tabElement.offsetLeft - container.offsetWidth / 2 + tabElement.offsetWidth / 2,
+                        behavior: 'smooth'
+                    };
+                    
+                    container.scrollTo(scrollOptions);
+                }
+            };
 
             // Обработчик поиска
             const handleSearch = () => {
@@ -1073,12 +1097,16 @@
                                     {tabs.map(tab => (
                                         <button 
                                             key={tab.id}
+                                            id={`tab-${tab.id}`}
                                             className={`flex items-center gap-2 py-3 px-5 rounded-xl whitespace-nowrap ${
                                                 activeTab === tab.id 
                                                     ? 'bg-primary-500/20 text-primary-500' 
                                                     : 'text-dark-600 dark:text-slate-200'
                                             }`}
-                                            onClick={() => setActiveTab(tab.id)}
+                                            onClick={() => {
+                                                setActiveTab(tab.id);
+                                                scrollTabIntoView(tab.id);
+                                            }}
                                         >
                                             {getIcon(tab.icon)}
                                             <span>{tab.name}</span>
