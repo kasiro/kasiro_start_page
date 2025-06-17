@@ -223,6 +223,108 @@
                 showSiteModal,
                 showIconManager
             ]);
+            
+            const [draggingSite, setDraggingSite] = useState(null);
+            const [dragOverGroupId, setDragOverGroupId] = useState(null);
+            const [dragOverSiteId, setDragOverSiteId] = useState(null);
+
+            // Обработчики для перетаскивания сайтов
+            const handleSiteDragStart = (e, site, groupId) => {
+                setDraggingSite({ ...site, sourceGroupId: groupId });
+                e.dataTransfer.setData("text/plain", JSON.stringify({ site, sourceGroupId: groupId }));
+                e.dataTransfer.effectAllowed = "move";
+            };
+
+            const handleSiteDragOver = (e, groupId, siteId = null) => {
+                e.preventDefault();
+                setDragOverGroupId(groupId);
+                setDragOverSiteId(siteId);
+                
+                // Если группа пустая - создаем временный ID для визуализации
+                const group = siteGroups.find(g => g.id === groupId);
+                if (group && group.sites.length === 0) {
+                    setDragOverSiteId('empty-group-drop');
+                }
+            };
+
+            const handleSiteDragEnd = () => {
+                setDraggingSite(null);
+                setDragOverGroupId(null);
+                setDragOverSiteId(null);
+            };
+
+            const handleSiteDrop = (e, targetGroupId, targetSiteId = null) => {
+                e.preventDefault();
+                
+                // Получаем данные из dataTransfer (на случай, если drag начался в другом окне)
+                const data = e.dataTransfer.getData("text/plain");
+                let siteData;
+                
+                try {
+                    siteData = JSON.parse(data);
+                } catch (e) {
+                    if (!draggingSite) return;
+                    siteData = draggingSite;
+                }
+                
+                const { sourceGroupId, site } = siteData;
+                
+                if (targetSiteId === 'empty-group-drop') {
+                   targetSiteId = null;
+                }
+
+                if (sourceGroupId === targetGroupId) {
+                    // Перемещение внутри группы
+                    const updatedGroups = [...siteGroups];
+                    const groupIndex = updatedGroups.findIndex(g => g.id === targetGroupId);
+                    const sites = [...updatedGroups[groupIndex].sites];
+                    
+                    const fromIndex = sites.findIndex(s => s.id === site.id);
+                    let toIndex = sites.length;
+                    
+                    if (targetSiteId) {
+                        toIndex = sites.findIndex(s => s.id === targetSiteId);
+                    }
+                    
+                    if (fromIndex !== toIndex && fromIndex !== -1) {
+                        // Удаляем из исходной позиции
+                        const [movedSite] = sites.splice(fromIndex, 1);
+                        
+                        // Корректируем индекс, если удаление сдвинуло позиции
+                        if (toIndex > fromIndex) {
+                            toIndex--;
+                        }
+                        
+                        // Вставляем в новую позицию
+                        sites.splice(toIndex, 0, movedSite);
+                        
+                        updatedGroups[groupIndex].sites = sites;
+                        setSiteGroups(updatedGroups);
+                    }
+                } else {
+                    // Перемещение между группами
+                    const updatedGroups = [...siteGroups];
+                    
+                    // Удаляем из исходной группы
+                    const sourceGroupIndex = updatedGroups.findIndex(g => g.id === sourceGroupId);
+                    updatedGroups[sourceGroupIndex].sites = updatedGroups[sourceGroupIndex].sites.filter(s => s.id !== site.id);
+                    
+                    // Добавляем в целевую группу
+                    const targetGroupIndex = updatedGroups.findIndex(g => g.id === targetGroupId);
+                    let targetIndex = updatedGroups[targetGroupIndex].sites.length;
+                    
+                    if (targetSiteId) {
+                        targetIndex = updatedGroups[targetGroupIndex].sites.findIndex(s => s.id === targetSiteId);
+                    }
+                    
+                    updatedGroups[targetGroupIndex].sites.splice(targetIndex, 0, site);
+                    setSiteGroups(updatedGroups);
+                }
+                
+                setDraggingSite(null);
+                setDragOverGroupId(null);
+                setDragOverSiteId(null);
+            };
 
             useEffect(() => {
                 localStorage.setItem('searchEngine', JSON.stringify(searchEngine));
@@ -264,7 +366,6 @@
             };
             
             const [draggingGroupId, setDraggingGroupId] = useState(null);
-            const [dragOverGroupId, setDragOverGroupId] = useState(null);
 
             // Функции для перетаскивания групп
             const handleDragStart = (e, groupId) => {
@@ -1141,8 +1242,19 @@
                                             {group.sites.map(site => (
                                                 <a 
                                                     key={site.id}
-                                                    className="site-item flex flex-col items-center gap-1 p-3 rounded-2xl panel cursor-pointer" 
+                                                    className={`site-item flex flex-col items-center gap-1 p-3 rounded-2xl panel cursor-pointer ${
+                                                        draggingSite?.id === site.id ? 'opacity-50' : ''
+                                                    } ${
+                                                        dragOverGroupId === group.id && dragOverSiteId === site.id 
+                                                            ? 'ring-2 ring-primary-500' 
+                                                            : ''
+                                                    }`}
                                                     onClick={() => handleSiteClick(site.url)}
+                                                    draggable
+                                                    onDragStart={(e) => handleSiteDragStart(e, site, group.id)}
+                                                    onDragOver={(e) => handleSiteDragOver(e, group.id, site.id)}
+                                                    onDragEnd={handleSiteDragEnd}
+                                                    onDrop={(e) => handleSiteDrop(e, group.id, site.id)}
                                                 >
                                                     <div className={`w-10 h-10 rounded-xl ${group.color} bg-opacity-20 flex items-center justify-center`}>
                                                         <span className="text-lg">
@@ -1152,16 +1264,38 @@
                                                     <div className="text-xs font-medium text-center">{site.name}</div>
                                                 </a>
                                             ))}
-                                            
-                                            <div 
-                                                className="site-item flex flex-col items-center gap-1 p-3 rounded-2xl panel cursor-pointer hover:bg-primary-100 dark:hover:bg-dark-700"
-                                                onClick={() => openAddSiteForm(group.id)}
-                                            >
-                                                <div className="w-10 h-10 rounded-xl flex items-center justify-center">
-                                                    <i className="fas fa-plus text-lg"></i>
-                                                </div>
-                                                <div className="text-xs font-medium">Добавить</div>
-                                            </div>
+
+ 
+                                            {group.sites.length === 0 && (
+    <div 
+        className={`col-span-full flex flex-col items-center justify-center p-4 rounded-2xl cursor-pointer border-2 border-dashed ${
+            dragOverGroupId === group.id && dragOverSiteId === 'empty-group-drop' 
+                ? 'border-primary-500 ring-2 ring-primary-500' 
+                : 'border-slate-300 dark:border-dark-600'
+        }`}
+        onDragOver={(e) => handleSiteDragOver(e, group.id, 'empty-group-drop')}
+        onDrop={(e) => handleSiteDrop(e, group.id, 'empty-group-drop')}
+        onClick={() => openAddSiteForm(group.id)} // Добавляем возможность добавить сайт по клику на область
+    >
+        <div className="w-10 h-10 rounded-full bg-primary-500/10 flex items-center justify-center mb-2">
+            <i className="fas fa-plus text-primary-500"></i>
+        </div>
+        <p className="font-medium text-sm">Перетащите сюда сайты</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">или нажмите, чтобы добавить</p>
+    </div>
+)}
+
+                                            {group.sites.length > 0 && (
+                <div 
+                    className="site-item flex flex-col items-center gap-1 p-3 rounded-2xl panel cursor-pointer hover:bg-primary-100 dark:hover:bg-dark-700"
+                    onClick={() => openAddSiteForm(group.id)}
+                >
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center">
+                        <i className="fas fa-plus text-lg"></i>
+                    </div>
+                    <div className="text-xs font-medium">Добавить</div>
+                </div>
+            )}
                                         </div>
                                     </div>
                                 ))}
