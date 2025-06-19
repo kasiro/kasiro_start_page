@@ -186,9 +186,74 @@
                     url: 'https://www.google.com/search?q=%s'
                 };
             });
-            const [customSearchUrl, setCustomSearchUrl] = useState('');
+            const [searchEngines, setSearchEngines] = useState(() => {
+            const saved = localStorage.getItem('searchEngines');
+            return saved ? JSON.parse(saved) : [
+                { name: 'Google', url: 'https://www.google.com/search?q=%s' },
+                { name: 'DuckDuckGo', url: 'https://duckduckgo.com/?q=%s' },
+                { name: 'Bing', url: 'https://www.bing.com/search?q=%s' },
+                { name: 'Яндекс', url: 'https://yandex.ru/search/?text=%s' }
+            ];
+        });
+        
+        const [currentSearchEngine, setCurrentSearchEngine] = useState(() => {
+            const saved = localStorage.getItem('currentSearchEngine');
+            return saved ? JSON.parse(saved) : searchEngines[3];
+        });
+        
+        const [newSearchEngineName, setNewSearchEngineName] = useState('');
+        const [newSearchEngineUrl, setNewSearchEngineUrl] = useState('');
+
+        // Сохранение поисковых систем в localStorage
+        useEffect(() => {
+            localStorage.setItem('searchEngines', JSON.stringify(searchEngines));
+            localStorage.setItem('currentSearchEngine', JSON.stringify(currentSearchEngine));
+        }, [searchEngines, currentSearchEngine]);
+        
+        // ... существующие функции ...
+
+        // Функция для добавления новой поисковой системы
+        const addSearchEngine = () => {
+            if (!newSearchEngineName.trim() || !newSearchEngineUrl.trim()) {
+                alert('Пожалуйста, заполните все поля');
+                return;
+            }
+            
+            if (!newSearchEngineUrl.includes('%s')) {
+                alert('URL должен содержать %s для подстановки запроса');
+                return;
+            }
+            
+            const newEngine = {
+                name: newSearchEngineName.trim(),
+                url: newSearchEngineUrl.trim()
+            };
+            
+            setSearchEngines([...searchEngines, newEngine]);
+            setNewSearchEngineName('');
+            setNewSearchEngineUrl('');
+        };
+        
+        // Функция для удаления поисковой системы
+        const removeSearchEngine = (index) => {
+            if (searchEngines.length <= 1) {
+                alert('Должна остаться хотя бы одна поисковая система');
+                return;
+            }
+            
+            const newEngines = [...searchEngines];
+            newEngines.splice(index, 1);
+            setSearchEngines(newEngines);
+            
+            // Если удалили текущую, устанавливаем первую из списка
+            if (currentSearchEngine.name === searchEngines[index].name) {
+                setCurrentSearchEngine(newEngines[0]);
+                // console.log('setCurrentSearchEngine:', searchEngines[0].name)
+            }
+        };
                 
             useEffect(() => {
+                if (true) return;
                 const config = tailwind.config;
 
                 if (!config || !config.theme?.extend?.colors?.dark) {
@@ -359,7 +424,7 @@
                 if (searchQuery.trim() === '') return;
                 
                 const encodedQuery = encodeURIComponent(searchQuery.trim());
-                const searchUrl = searchEngine.url.replace('%s', encodedQuery);
+                const searchUrl = currentSearchEngine.url.replace('%s', encodedQuery);
                 
                 window.open(searchUrl, '_blank');
                 setSearchQuery('');
@@ -412,8 +477,7 @@
             // Формы
             const [groupForm, setGroupForm] = useState({
                 name: '',
-                icon: 'globe',
-                color: 'text-blue-500'
+                icon: 'globe'
             });
             
             const [siteForm, setSiteForm] = useState({
@@ -421,13 +485,6 @@
                 url: '',
                 icon: 'globe'
             });
-            
-            // Цвета для групп
-            const groupColors = [
-                'text-blue-500', 'text-red-500', 'text-green-500', 
-                'text-yellow-500', 'text-purple-500', 'text-pink-500',
-                'text-indigo-500', 'text-emerald-500', 'text-amber-500'
-            ];
             
             // Стандартные иконки
             const defaultIcons = [
@@ -526,8 +583,7 @@
             const openAddGroupForm = () => {
                 setGroupForm({
                     name: '',
-                    icon: 'globe',
-                    color: groupColors[0]
+                    icon: 'globe'
                 });
                 setEditingGroup(null);
                 setShowGroupModal(true);
@@ -537,8 +593,7 @@
             const openEditGroupForm = (group) => {
                 setGroupForm({
                     name: group.name,
-                    icon: group.icon,
-                    color: group.color
+                    icon: group.icon
                 });
                 setEditingGroup(group);
                 setShowGroupModal(true);
@@ -657,9 +712,9 @@
             // Получение иконки по имени
             const getIcon = (iconName) => {
                 if (iconName.startsWith('fab fa-')) {
-                    return <i className={`fab ${iconName} text-xl`}></i>;
+                    return <i className={`fab ${iconName} text-xl text-primary-500`}></i>;
                 }
-                return <i className={`fas fa-${iconName} text-xl`}></i>;
+                return <i className={`fas fa-${iconName} text-xl text-primary-500`}></i>;
             };
             
             // Рендеринг модального окна группы
@@ -681,19 +736,6 @@
                                         className="w-full p-3 rounded-xl bg-slate-100 dark:bg-dark-600 border border-transparent focus:border-primary-500 outline-none"
                                         placeholder="Мои сайты"
                                     />
-                                </div>
-                                
-                                <div>
-                                    <label className="block mb-1">Цвет группы</label>
-                                    <div className="flex flex-wrap gap-2">
-                                        {groupColors.map(color => (
-                                            <button
-                                                key={color}
-                                                className={`w-8 h-8 rounded-full ${color.replace('text', 'bg')} ${groupForm.color === color ? 'ring-2 ring-offset-[0.3px] dark:ring-white ring-dark-700' : ''}`}
-                                                onClick={() => setGroupForm({...groupForm, color})}
-                                            ></button>
-                                        ))}
-                                    </div>
                                 </div>
                                 
                                 <div>
@@ -968,65 +1010,68 @@
                           </div>
                         </div>
 
-                        {/* Раздел для поисковой системы */}
+                         {/* Обновленный раздел для поисковых систем */}
                         <div className="settings-panel mb-6">
                             <h2 className="text-xl font-semibold mb-4 flex items-center gap-3">
-                                <i className="fas fa-search"></i> Поисковая система
+                                <i className="fas fa-search"></i> Поисковые системы
                             </h2>
                             
-                            <div className="mb-4">
-                                <label className="block mb-2 font-medium">Выбрать поисковую систему</label>
-                                <div className="grid grid-cols-2 gap-3">
-                                    {[
-                                        { name: 'Google', url: 'https://www.google.com/search?q=%s' },
-                                        { name: 'DuckDuckGo', url: 'https://duckduckgo.com/?q=%s' },
-                                        { name: 'Bing', url: 'https://www.bing.com/search?q=%s' },
-                                        { name: 'Яндекс', url: 'https://yandex.ru/search/?text=%s' }
-                                    ].map(engine => (
-                                        <button
-                                            key={engine.name}
-                                            className={`py-3 px-4 rounded-xl text-center ${
-                                                searchEngine.name === engine.name 
-                                                    ? 'bg-primary-500 text-white' 
-                                                    : 'bg-slate-100 dark:bg-dark-600'
-                                            }`}
-                                            onClick={() => setSearchEngine(engine)}
+                            <div className="mb-6">
+                                <h3 className="font-medium mb-3">Список поисковых систем</h3>
+                                <div className="space-y-3">
+                                    {searchEngines.map((engine, index) => (
+                                        <div
+                                            key={index}
+                                            onClick={() => setCurrentSearchEngine(engine)}
+                                            className={`flex items-center justify-between p-3 rounded-xl ${
+                                                        currentSearchEngine.name === engine.name 
+                                                            ? 'bg-primary-500 text-white' 
+                                                            : 'bg-slate-200 dark:bg-dark-700'
+                                                    }`}
                                         >
-                                            {engine.name}
-                                        </button>
+                                            <div>
+                                                <div className="font-medium">{engine.name}</div>
+                                            </div>
+                                            <div className="flex">
+                                                <button 
+                                                    className="px-3 py-1 rounded-md bg-red-500 text-white"
+                                                    onClick={() => removeSearchEngine(index)}
+                                                    disabled={searchEngines.length <= 1}
+                                                >
+                                                    <i className="fas fa-times text-md"></i>
+                                                </button>
+                                            </div>
+                                        </div>
                                     ))}
                                 </div>
                             </div>
                             
                             <div>
-                                <label className="block mb-2 font-medium">Или введите свою (с %s для вставки запроса)</label>
-                                <div className="flex flex-col gap-2">
+                                <h3 className="font-medium mb-3">Добавить новую поисковую систему</h3>
+                                <div className="flex flex-col gap-3">
                                     <input
                                         type="text"
-                                        value={customSearchUrl}
-                                        onChange={(e) => setCustomSearchUrl(e.target.value)}
-                                        placeholder="https://example.com/search?q=%s"
-                                        className="flex-1 p-3 rounded-xl bg-slate-100 dark:bg-dark-600 border border-transparent focus:border-primary-500 outline-none"
+                                        value={newSearchEngineName}
+                                        onChange={(e) => setNewSearchEngineName(e.target.value)}
+                                        placeholder="Название (например: MySearch)"
+                                        className="p-3 rounded-xl bg-slate-100 dark:bg-dark-600 border border-transparent focus:border-primary-500 outline-none"
+                                    />
+                                    <input
+                                        type="text"
+                                        value={newSearchEngineUrl}
+                                        onChange={(e) => setNewSearchEngineUrl(e.target.value)}
+                                        placeholder="URL с %s (например: https://example.com/search?q=%s)"
+                                        className="p-3 rounded-xl bg-slate-100 dark:bg-dark-600 border border-transparent focus:border-primary-500 outline-none"
                                     />
                                     <button
                                         className="bg-primary-500 text-white p-3 rounded-xl hover:bg-primary-600"
-                                        onClick={() => {
-                                            if (customSearchUrl.includes('%s')) {
-                                                setSearchEngine({
-                                                    name: 'Кастомная',
-                                                    url: customSearchUrl
-                                                });
-                                                setCustomSearchUrl('');
-                                            } else {
-                                                alert('URL должен содержать %s для подстановки запроса');
-                                            }
-                                        }}
+                                        onClick={addSearchEngine}
                                     >
-                                        Сохранить
+                                        Добавить поисковую систему
                                     </button>
                                 </div>
                             </div>
-                        </div>
+                        </div>                           
 
                         <div className="settings-panel">
                             <h2 className="text-xl font-semibold mb-4 flex items-center gap-3">
@@ -1066,9 +1111,7 @@
                                     >
                                         <div className="flex items-center justify-between mb-3">
                                             <div className="flex items-center gap-3">
-                                                <div className={group.color}>
-                                                    {getIcon(group.icon)}
-                                                </div>
+                                                {getIcon(group.icon)}
                                                 <h3 className="font-semibold text-lg">{group.name}</h3>
                                             </div>
                                             
@@ -1095,9 +1138,7 @@
                                                         className="flex items-center gap-3"
                                                         onClick={() => openEditSiteForm(site, group.id)}
                                                     >
-                                                        <div className={group.color}>
-                                                            {getIcon(site.icon)}
-                                                        </div>
+                                                        {getIcon(site.icon)}
                                                         <span>{site.name}</span>
                                                     </div>
                                                     <div className="flex">
@@ -1186,7 +1227,7 @@
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     onKeyDown={handleSearchKeyDown}
-                                    placeholder={`Поиск в ${searchEngine.name}`}
+                                    placeholder={`Поиск в ${currentSearchEngine.name}`}
                                     className="flex-1 py-4 px-6 outline-none bg-white dark:bg-dark-700"
                                 />
                             </div>
@@ -1233,9 +1274,7 @@
                                 {filteredGroups.map(group => (
                                     <div key={group.id} className="animate-fadeIn">
                                         <div className="flex items-center gap-3 mb-3 ml-2">
-                                            <div className={group.color}>
-                                                {getIcon(group.icon)}
-                                            </div>
+                                            {getIcon(group.icon)}
                                             <h2 className="text-xl font-semibold pl-3">{group.name}</h2>
                                         </div>
                                         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 gap-3">
@@ -1256,7 +1295,7 @@
                                                     onDragEnd={handleSiteDragEnd}
                                                     onDrop={(e) => handleSiteDrop(e, group.id, site.id)}
                                                 >
-                                                    <div className={`w-10 h-10 rounded-xl ${group.color} bg-opacity-20 flex items-center justify-center`}>
+                                                    <div className={`w-10 h-10 rounded-xl bg-accent bg-opacity-20 flex items-center justify-center`}>
                                                         <span className="text-lg">
                                                             {getIcon(site.icon)}
                                                         </span>
