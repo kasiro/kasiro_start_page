@@ -10,31 +10,45 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        primary: {
-                            500: '#6366f1',
-                            600: '#4f46e5'
-                        },
-                        secondary: '#8b5cf6',
-                        dark: {
-                            900: '#121212',  // Самый темный (почти черный)
-                            800: '#1e1e1e',  // Темно-серый
-                            700: '#2d2d2d',  // Серый
-                            600: '#3d3d3d',  // Средне-серый
-                            500: '#4d4d4d'   // Светло-серый
-                        },
-                        light: '#e2e8f0',
-                        accent: '#c7d2fe'
-                    }
+    tailwind.config = {
+        darkMode: 'class',
+        theme: {
+            extend: {
+                colors: {
+                    primary: {
+                        500: 'hsl(var(--primary-hue) var(--primary-saturation) var(--primary-lightness))',
+                        600: 'hsl(var(--primary-hue) var(--primary-saturation) calc(var(--primary-lightness) - 10%))'
+                    },
+                    secondary: 'hsl(var(--secondary-hue) var(--secondary-saturation) var(--secondary-lightness))',
+                    accent: 'hsl(var(--accent-hue) var(--accent-saturation) var(--accent-lightness))',
+                    dark: {
+                        900: '#121212',
+                        800: '#1e1e1e',
+                        700: '#2d2d2d',
+                        600: '#3d3d3d',
+                        500: '#4d4d4d'
+                    },
+                    light: '#e2e8f0'
                 }
             }
         }
-    </script>
+    }
+</script>
     <style type="text/tailwindcss">
+        :root {
+    --primary-hue: 250;
+    --primary-saturation: 79%;
+    --primary-lightness: 59%;
+    
+    --secondary-hue: 280;
+    --secondary-saturation: 79%;
+    --secondary-lightness: 59%;
+    
+    --accent-hue: 250;
+    --accent-saturation: 99%;
+    --accent-lightness: 79%;
+}
+
         @layer base {
             body {
                 @apply bg-slate-100 text-slate-800 dark:bg-dark-900 dark:text-slate-200 min-h-screen p-5 overflow-x-hidden;
@@ -71,9 +85,9 @@
             }
             
             input:checked + .toggle-switch {
-                @apply bg-primary-500;
+                background-color: hsl(var(--primary-hue) var(--primary-saturation) var(--primary-lightness));
             }
-            
+
             input:checked + .toggle-switch:after {
                 @apply left-7;
             }
@@ -83,7 +97,10 @@
             }
             
             .icon-grid-item {
-               @apply p-3 rounded-lg flex flex-col items-center bg-slate-100 dark:bg-dark-700;
+                @apply p-3 rounded-lg flex flex-col items-center bg-slate-100 dark:bg-dark-700;
+                &:hover {
+                    background-color: hsla(var(--primary-hue) var(--primary-saturation) var(--primary-lightness) / 0.1);
+                }
             }
             .icon-grid-item-icon {
                 @apply text-2xl mb-2;
@@ -195,7 +212,52 @@
                 { name: 'Яндекс', url: 'https://yandex.ru/search/?text=%s' }
             ];
         });
-        
+
+        // Начальные значения цвета (синий по умолчанию)
+const [primaryColor, setPrimaryColor] = useState(() => {
+    const saved = localStorage.getItem('primaryColor');
+    return saved ? JSON.parse(saved) : {
+        hue: 250,
+        saturation: 79,
+        lightness: 59
+    };
+});
+
+// Эффект для обновления CSS переменных
+useEffect(() => {
+    const { hue, saturation, lightness } = primaryColor;
+    
+    document.documentElement.style.setProperty('--primary-hue', hue);
+    document.documentElement.style.setProperty('--primary-saturation', `${saturation}%`);
+    document.documentElement.style.setProperty('--primary-lightness', `${lightness}%`);
+    
+    // Рассчитываем производные цвета
+    document.documentElement.style.setProperty('--secondary-hue', (hue + 30) % 360);
+    document.documentElement.style.setProperty('--secondary-saturation', `${saturation}%`);
+    document.documentElement.style.setProperty('--secondary-lightness', `${lightness}%`);
+    
+    document.documentElement.style.setProperty('--accent-hue', hue);
+    document.documentElement.style.setProperty('--accent-saturation', `${Math.min(saturation + 20, 100)}%`);
+    document.documentElement.style.setProperty('--accent-lightness', `${Math.min(lightness + 20, 90)}%`);
+    
+    localStorage.setItem('primaryColor', JSON.stringify(primaryColor));
+}, [primaryColor]);
+
+// Функция для обновления цвета
+const updatePrimaryColor = (hue, saturation, lightness) => {
+    setPrimaryColor({ 
+        hue: parseInt(hue),
+        saturation: parseInt(saturation),
+        lightness: parseInt(lightness)
+    });
+};
+
+        useEffect(() => {
+            document.documentElement.style.setProperty('--primary-hue', primaryColor.hue);
+            document.documentElement.style.setProperty('--primary-saturation', `${primaryColor.saturation}%`);
+            document.documentElement.style.setProperty('--primary-lightness', `${primaryColor.lightness}%`);
+        }, [primaryColor]);
+
         const [currentSearchEngine, setCurrentSearchEngine] = useState(() => {
             const saved = localStorage.getItem('currentSearchEngine');
             return saved ? JSON.parse(saved) : searchEngines[3];
@@ -984,6 +1046,98 @@
                             </div>
                         </div>
                         
+<div className="settings-panel mb-6">
+    <h2 className="text-xl font-semibold mb-4 flex items-center gap-3">
+        <i className="fas fa-palette"></i> Цветовая схема
+    </h2>
+    
+    <div className="mb-4">
+        <label className="block mb-2">Основной цвет</label>
+        <div className="flex items-center gap-4">
+            <input
+                type="range"
+                min="0"
+                max="360"
+                value={primaryColor.hue}
+                onChange={(e) => updatePrimaryColor(
+                    e.target.value, 
+                    primaryColor.saturation, 
+                    primaryColor.lightness
+                )}
+                className="w-full"
+            />
+            <div 
+                className="w-10 h-10 rounded-lg border border-slate-200 dark:border-dark-600"
+                style={{
+                    backgroundColor: `hsl(${primaryColor.hue}, ${primaryColor.saturation}%, ${primaryColor.lightness}%)`
+                }}
+            ></div>
+        </div>
+    </div>
+    
+    <div className="grid grid-cols-2 gap-4 w-full">
+        <div>
+            <label className="block mb-2">Насыщенность</label>
+            <input
+                type="range"
+                min="0"
+                max="100"
+                value={primaryColor.saturation}
+                onChange={(e) => updatePrimaryColor(
+                    primaryColor.hue, 
+                    e.target.value, 
+                    primaryColor.lightness
+                )}
+                className="w-full"
+            />
+        </div>
+        <div>
+            <label className="block mb-2">Яркость</label>
+            <input
+                type="range"
+                min="0"
+                max="100"
+                value={primaryColor.lightness}
+                onChange={(e) => updatePrimaryColor(
+                    primaryColor.hue, 
+                    primaryColor.saturation, 
+                    e.target.value
+                )}
+                className="w-full"
+            />
+        </div>
+    </div>
+
+    <div className="flex items-end my-3 w-full">
+        <button 
+            className="w-full bg-primary-500 text-white py-2 rounded-lg hover:bg-primary-600"
+            onClick={() => updatePrimaryColor(250, 79, 59)}
+        >
+            Сбросить
+        </button>
+    </div>
+
+    
+    <div className="mt-4 grid grid-cols-4 gap-2">
+        <button 
+            className="h-10 rounded-lg bg-blue-500 hover:bg-blue-600"
+            onClick={() => updatePrimaryColor(220, 83, 61)} // Синий
+        ></button>
+        <button 
+            className="h-10 rounded-lg bg-purple-500 hover:bg-purple-600"
+            onClick={() => updatePrimaryColor(272, 91, 65)} // Фиолетовый
+        ></button>
+        <button 
+            className="h-10 rounded-lg bg-red-500 hover:bg-red-600"
+            onClick={() => updatePrimaryColor(0, 84, 60)} // Красный
+        ></button>
+        <button 
+            className="h-10 rounded-lg bg-green-500 hover:bg-green-600"
+            onClick={() => updatePrimaryColor(142, 71, 54)} // Зеленый
+        ></button>
+    </div>
+</div>
+
                         <div className="settings-panel mb-6">
                           <h2 className="text-xl font-semibold mb-4 flex items-center gap-3">
                             <i className="fas fa-city"></i> Локация
