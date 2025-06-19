@@ -712,9 +712,9 @@
             // Получение иконки по имени
             const getIcon = (iconName) => {
                 if (iconName.startsWith('fab fa-')) {
-                    return <i className={`fab ${iconName} text-xl text-primary-500`}></i>;
+                    return <i className={`fab ${iconName} text-xl`}></i>;
                 }
-                return <i className={`fas fa-${iconName} text-xl text-primary-500`}></i>;
+                return <i className={`fas fa-${iconName} text-xl`}></i>;
             };
             
             // Рендеринг модального окна группы
@@ -755,7 +755,7 @@
                                         {allIcons.map(icon => (
                                             <button
                                                 key={icon}
-                                                className={`p-2 rounded-lg flex flex-col items-center ${groupForm.icon === icon ? 'bg-primary-500 text-white' : 'bg-slate-100 dark:bg-dark-700'}`}
+                                                className={`p-2 rounded-lg flex flex-col items-center text-primary-500 ${groupForm.icon === icon ? 'bg-primary-500 text-white' : 'bg-slate-100 dark:bg-dark-700'}`}
                                                 onClick={() => setGroupForm({...groupForm, icon})}
                                                 title={icon}
                                             >
@@ -835,7 +835,7 @@
                                         {allIcons.map(icon => (
                                             <button
                                                 key={icon}
-                                                className={`p-2 rounded-lg flex flex-col items-center ${siteForm.icon === icon ? 'bg-primary-500 text-white' : 'bg-slate-100 dark:bg-dark-700'}`}
+                                                className={`p-2 rounded-lg flex flex-col items-center text-primary-500 ${siteForm.icon === icon ? 'bg-primary-500 text-white' : 'bg-slate-100 dark:bg-dark-700'}`}
                                                 onClick={() => setSiteForm({...siteForm, icon})}
                                                 title={icon}
                                             >
@@ -912,7 +912,7 @@
                         <div className="icon-manager-scroll-container dark:border-slate-700 rounded-lg">
                             <div className="icon-manager-grid">
                                 {allIcons.map(icon => (
-                                    <div key={icon} className="relative icon-grid-item">
+                                    <div key={icon} className="text-primary-500 relative icon-grid-item">
                                         <div className="icon-grid-item-icon">
                                             {getIcon(icon)}
                                         </div>
@@ -1110,9 +1110,9 @@
                                     onDrop={(e) => handleDrop(e, group.id)}
                                     >
                                         <div className="flex items-center justify-between mb-3">
-                                            <div className="flex items-center gap-3">
+                                            <div className="flex items-center gap-3 text-primary-500">
                                                 {getIcon(group.icon)}
-                                                <h3 className="font-semibold text-lg">{group.name}</h3>
+                                                <h3 className="font-semibold text-black dark:text-white text-lg">{group.name}</h3>
                                             </div>
                                             
                                             <div className="flex mt-2 gap-2">
@@ -1135,11 +1135,11 @@
                                             {group.sites.map(site => (
                                                 <div key={site.id} className="flex items-center gap-2 bg-white dark:bg-dark-700 px-3 py-2 rounded-lg">
                                                     <div
-                                                        className="flex items-center gap-3"
+                                                        className="flex items-center gap-3 text-primary-500"
                                                         onClick={() => openEditSiteForm(site, group.id)}
                                                     >
                                                         {getIcon(site.icon)}
-                                                        <span>{site.name}</span>
+                                                        <span className="text-black dark:text-white">{site.name}</span>
                                                     </div>
                                                     <div className="flex">
                                                         <button
@@ -1273,9 +1273,9 @@
                             <div className="space-y-6">
                                 {filteredGroups.map(group => (
                                     <div key={group.id} className="animate-fadeIn">
-                                        <div className="flex items-center gap-3 mb-3 ml-2">
+                                        <div className="flex items-center mb-3 ml-2 text-primary-500">
                                             {getIcon(group.icon)}
-                                            <h2 className="text-xl font-semibold pl-3">{group.name}</h2>
+                                            <h2 className="text-black dark:text-white text-xl pl-2 font-semibold">{group.name}</h2>
                                         </div>
                                         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 gap-3">
                                             {group.sites.map(site => (
@@ -1295,7 +1295,7 @@
                                                     onDragEnd={handleSiteDragEnd}
                                                     onDrop={(e) => handleSiteDrop(e, group.id, site.id)}
                                                 >
-                                                    <div className={`w-10 h-10 rounded-xl bg-accent bg-opacity-20 flex items-center justify-center`}>
+                                                    <div className={`w-10 h-10 rounded-xl text-primary-500 bg-accent bg-opacity-20 flex items-center justify-center`}>
                                                         <span className="text-lg">
                                                             {getIcon(site.icon)}
                                                         </span>
