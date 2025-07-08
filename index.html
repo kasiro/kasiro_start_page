@@ -1686,13 +1686,13 @@ useEffect(() => {
                         </div>
 
                         {siteGroups.length > 0 && (
-                            <div className="flex flex-col gap-1 mb-6 p-1 rounded-xl panel overflow-x-auto scrollbar-width-none">
+                            <div className="flex flex-col gap-1 mb-6 p-[6px] rounded-xl panel overflow-x-auto scrollbar-width-none">
                                 <div className="flex gap-1 overflow-x-auto scrollbar-width-none">
                                     {tabs.map(tab => (
                                         <button 
                                             key={tab.id}
                                             id={`tab-${tab.id}`}
-                                            className={`flex items-center gap-2 py-3 px-5 rounded-xl whitespace-nowrap ${
+                                            className={`flex items-center gap-2 py-3 px-5 rounded-[0.44rem] whitespace-nowrap ${
                                                 activeTab === tab.id 
                                                     ? 'bg-primary-500/20 text-primary-500' 
                                                     : 'text-dark-600 dark:text-slate-200'
