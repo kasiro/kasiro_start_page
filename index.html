@@ -476,7 +476,6 @@ useEffect(() => {
             // Если удалили текущую, устанавливаем первую из списка
             if (currentSearchEngine.name === searchEngines[index].name) {
                 setCurrentSearchEngine(newEngines[0]);
-                // console.log('setCurrentSearchEngine:', searchEngines[0].name)
             }
         };
                 
@@ -1478,15 +1477,19 @@ useEffect(() => {
                                             <div>
                                                 <div className="font-medium">{engine.name}</div>
                                             </div>
-                                            <div className="flex">
-                                                <button 
-                                                    className="px-3 py-1 rounded-md bg-red-500 text-white"
-                                                    onClick={() => removeSearchEngine(index)}
-                                                    disabled={searchEngines.length <= 1}
-                                                >
-                                                    <i className="fas fa-times text-md"></i>
-                                                </button>
-                                            </div>
+                                            {searchEngines.length > 1 && (
+                                                <div className="flex">
+                                                    <button 
+                                                        className="px-3 py-1 rounded-md bg-red-500 text-white"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            removeSearchEngine(index)
+                                                        }}
+                                                    >
+                                                        <i className="fas fa-times text-md"></i>
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
