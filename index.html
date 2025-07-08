@@ -331,6 +331,14 @@ useEffect(() => {
     localStorage.setItem('wallpaper', JSON.stringify(wallpaper));
 }, [wallpaper]);
 
+useEffect(() => {
+    localStorage.setItem('wallpapers', JSON.stringify(wallpapers));
+}, [wallpapers]);
+
+useEffect(() => {
+    localStorage.setItem('customWallpapers', JSON.stringify(customWallpapers));
+}, [customWallpapers]);
+
 // Функция для обновления цвета
 const updatePrimaryColor = (hue, saturation, lightness) => {
     setPrimaryColor({ 
@@ -372,7 +380,7 @@ const updateWallpaperOpacity = (opacity) => {
     document.querySelector('.wallpaper-overlay').style.opacity = opacity;
 };
 
-const addWallpaper = (url) => {
+    const addWallpaper = (url) => {
         if (!url.trim()) return;
         const newWallpaper = {
             name: `Пользовательские обои ${customWallpapers.length + 1}`,
