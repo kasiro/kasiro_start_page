@@ -266,6 +266,51 @@
             ];
         });
 
+const [themePresets, setThemePresets] = useState(() => {
+    const saved = localStorage.getItem('themePresets');
+    return saved ? JSON.parse(saved) : [];
+});
+const [editingPresetId, setEditingPresetId] = useState(null);
+const [newPresetName, setNewPresetName] = useState('');
+
+// 2. Обновляем функции работы с пресетами
+const addThemePreset = () => {
+  if (!newPresetName.trim()) return;
+  
+  const newPreset = {
+    id: generateId(),
+    name: newPresetName.trim(),
+    wallpaper: {...wallpaper},
+    primaryColor: {...primaryColor},
+    createdAt: new Date().toISOString()
+  };
+  
+  setThemePresets([...themePresets, newPreset]);
+  setNewPresetName('');
+};
+
+const updatePresetName = (id, newName) => {
+  setThemePresets(themePresets.map(preset => 
+    preset.id === id ? {...preset, name: newName.trim()} : preset
+  ));
+  setEditingPresetId(null);
+};
+
+// Применение пресета
+const applyThemePreset = (preset) => {
+    setWallpaper(preset.wallpaper);
+    setPrimaryColor(preset.primaryColor);
+};
+
+// Удаление пресета
+const removeThemePreset = (id) => {
+    setThemePresets(themePresets.filter(p => p.id !== id));
+};
+
+useEffect(() => {
+    localStorage.setItem('themePresets', JSON.stringify(themePresets));
+}, [themePresets]);
+
         // Начальные значения цвета (синий по умолчанию)
 const [primaryColor, setPrimaryColor] = useState(() => {
     const saved = localStorage.getItem('primaryColor');
@@ -957,57 +1002,111 @@ useEffect(() => {
             }, [customWallpapers]);
 
             const SelectChose = ({
-              placeholder_text,
-              List,
-              value,
-              onChange,
-              input_className = "form-input rounded-md w-full",
-              list_border = true,
-              read_only = true,
-              onSet = () => {},
-              onKeyDown = () => {}
-            }) => {
-                const [show, setshow] = useState(false);
+        placeholder_text,
+        value,
+        onChange,
+        input_className = "form-input rounded-md w-full",
+        list_border = true,
+        read_only = true,
+        onSet = () => {},
+        onKeyDown = () => {}
+    }) => {
+        const [show, setShow] = useState(false);
+        const [searchHistory, setSearchHistory] = useState(() => {
+            const saved = localStorage.getItem('searchHistory');
+            return saved ? JSON.parse(saved) : [];
+        });
 
-                return (
-                <div className="relative w-full">
-                  <div className="flex flex-col w-full">
-                    <input
-                      type="text"
-                      readOnly={read_only}
-                      value={value || ''}
-                      onChange={onChange}
-                      onKeyDown={onKeyDown}
-                      onFocus={() => setshow(true)}
-                      onBlur={() => {
-                        const int_ = setTimeout(() => {
-                           setshow(false)
-                        }, 50)
-                        return () => clearInterval(int_)
-                      }}
-                      className={input_className}
-                      placeholder={placeholder_text}
-                    />
-                    {show && List.length > 0 && (
-                    <div className="absolute mt-12 z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg mt-1 max-h-60 overflow-y-auto">
-                      {List.map((element, index) => (
-                        <div
-                          key={index}
-                          className="px-4 py-2 hover:bg-purple-100 cursor-pointer border-b border-gray-100 last:border-b-0"
-                          onClick={() => {
-                            onSet(element);
-                            setshow(false);
-                          }}
-                        >
-                          <p>{element}</p>
-                        </div>
-                      ))}
-                    </div>
-                    )}
-                  </div>
-                </div>
-                );
+        // Добавление в историю поиска
+        const addToSearchHistory = (query) => {
+            if (!query.trim()) return;
+            
+            const updatedHistory = [
+                query.trim(),
+                ...searchHistory.filter(item => item.toLowerCase() !== query.trim().toLowerCase())
+            ].slice(0, 10); // Ограничиваем историю 10 последними запросами
+            
+            setSearchHistory(updatedHistory);
+            localStorage.setItem('searchHistory', JSON.stringify(updatedHistory));
+        };
+
+        // Очистка истории поиска
+        const clearSearchHistory = () => {
+            setSearchHistory([]);
+            localStorage.removeItem('searchHistory');
+        };
+
+        // Обработчик выбора элемента из списка
+        const handleItemSelect = (item) => {
+            onSet(item);
+            setShow(false);
+            addToSearchHistory(item);
+        };
+
+        // Обработчик отправки поиска
+        const handleSearchSubmit = () => {
+            if (value.trim()) {
+                addToSearchHistory(value);
             }
+        };
+
+        return (
+            <div className="relative w-full">
+                <div className="flex flex-col w-full">
+                    <div className="relative">
+                        <input
+                            type="text"
+                            readOnly={read_only}
+                            value={value || ''}
+                            onChange={onChange}
+                            onKeyDown={(e) => {
+                                onKeyDown(e);
+                                if (e.key === 'Enter') {
+                                    handleSearchSubmit();
+                                }
+                            }}
+                            onFocus={() => setShow(true)}
+                            onBlur={() => setTimeout(() => setShow(false), 200)}
+                            className={input_className}
+                            placeholder={placeholder_text}
+                        />
+                    </div>
+                    
+                    {show && searchHistory.length > 0 && (
+                        <div className={`absolute mt-[60px] z-10 w-full bg-white dark:bg-dark-700 rounded-lg shadow-lg overflow-hidden ${list_border ? 'border border-gray-200 dark:border-dark-600' : ''}`}>
+                            <div className="max-h-60 overflow-y-auto">
+                                {/* История поиска */}
+                                {searchHistory.length > 0 && (
+                                    <>
+                                        <div className="flex items-center justify-between px-4 py-2 bg-gray-50 dark:bg-dark-800">
+                                            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Недавние запросы</span>
+                                            <button 
+                                                className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                                onClick={clearSearchHistory}
+                                            >
+                                                Очистить
+                                            </button>
+                                        </div>
+                                        {searchHistory.map((item, index) => (
+                                            <div
+                                                key={`history-${index}`}
+                                                className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-dark-600 cursor-pointer flex items-center"
+                                                onClick={() => handleItemSelect(item)}
+                                            >
+                                                <i className="far fa-clock text-gray-400 mr-2"></i>
+                                                <span className="truncate">{item}</span>
+                                            </div>
+                                        ))}
+                                        <div className="border-t border-gray-100 dark:border-dark-600"></div>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    };
 
             // Рендеринг модального окна группы
             const renderGroupModal = () => {
@@ -1227,7 +1326,7 @@ useEffect(() => {
                 
                 <div className="icon-manager-footer">
                     <div className="flex justify-end pt-4">
-                        <button
+<button
                             className="px-4 py-2 rounded-xl bg-primary-500 text-white hover:bg-primary-600"
                             onClick={() => setShowIconManager(false)}
                         >
@@ -1239,6 +1338,133 @@ useEffect(() => {
         </div>
     );
 };
+
+const renderThemePresets = () => (
+      <div className="settings-panel mb-6">
+        <h2 className="text-xl font-semibold mb-4 flex items-center gap-3">
+          <i className="fas fa-palette"></i> Пресеты тем
+        </h2>
+        
+        {/* Форма создания нового пресета */}
+        <div className="mb-6 p-4 bg-slate-50 dark:bg-dark-800 rounded-lg">
+          <h3 className="font-medium mb-3">Создать новый пресет</h3>
+          <div className="flex flex-col gap-2">
+            <input
+              type="text"
+              value={newPresetName}
+              onChange={(e) => setNewPresetName(e.target.value)}
+              placeholder="Название пресета"
+              className="flex-1 p-2 rounded-lg bg-white dark:bg-dark-700 border border-slate-200 dark:border-dark-600"
+              onKeyDown={(e) => e.key === 'Enter' && addThemePreset()}
+            />
+            <button 
+              className="bg-primary-500 text-white px-4 py-2 rounded-lg hover:bg-primary-600 disabled:opacity-50"
+              onClick={addThemePreset}
+              disabled={!newPresetName.trim()}
+            >
+              <i className="fas fa-plus mr-2"></i>
+              Создать
+            </button>
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+            Пресет сохранит текущие обои и цветовую схему
+          </p>
+        </div>
+        
+        {/* Список пресетов */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {themePresets.map(preset => (
+            <div key={preset.id} className="relative group">
+              {/* Основная карточка пресета - теперь кликабельная вся */}
+              <div 
+                className={`p-4 rounded-lg border transition-all cursor-pointer ${
+                  wallpaper.type !== 'none' && preset.wallpaper.value === wallpaper.value
+                    ? 'border-primary-500 ring-2 ring-primary-500/20'
+                    : 'border-slate-200 dark:border-dark-600 hover:border-slate-300 dark:hover:border-dark-500'
+                }`}
+                onClick={() => applyThemePreset(preset)}
+              >
+                {/* Превью обоев */}
+                <div className="relative h-24 mb-3 rounded-md overflow-hidden bg-slate-100 dark:bg-dark-700">
+                  {preset.wallpaper.type === 'image' ? (
+                    <img 
+                      src={preset.wallpaper.value} 
+                      alt={preset.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-slate-400 dark:text-slate-500">
+                      <i className="fas fa-image text-2xl"></i>
+                    </div>
+                  )}
+                  {/* Индикатор текущего пресета */}
+                  {wallpaper.type !== 'none' && preset.wallpaper.value === wallpaper.value && (
+                    <div className="absolute top-2 left-2 bg-primary-500 text-white text-xs px-2 py-1 rounded-md">
+                      Активно
+                    </div>
+                  )}
+                </div>
+                
+                {/* Информация о пресете */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1">
+                    {editingPresetId === preset.id ? (
+                      <input
+                        type="text"
+                        defaultValue={preset.name}
+                        autoFocus
+                        onBlur={(e) => updatePresetName(preset.id, e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') updatePresetName(preset.id, e.target.value);
+                          if (e.key === 'Escape') setEditingPresetId(null);
+                        }}
+                        className="w-full bg-transparent border-b border-slate-300 dark:border-dark-500 focus:border-primary-500 outline-none"
+                      />
+                    ) : (
+                      <h3 className="font-medium truncate">{preset.name}</h3>
+                    )}
+                    <div className="flex items-center mt-2">
+                      <div 
+                        className="w-4 h-4 rounded-full mr-2 border border-slate-200 dark:border-dark-600"
+                        style={{
+                          backgroundColor: `hsl(${preset.primaryColor.hue}, ${preset.primaryColor.saturation}%, ${preset.primaryColor.lightness}%)`
+                        }}
+                      ></div>
+                      <span className="text-xs text-slate-500 dark:text-slate-400">
+                        {new Date(preset.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {/* Кнопки действий - теперь только редактирование и удаление */}
+                  <div className="flex gap-1">
+                    <button
+                      className="p-2 text-slate-500 hover:text-primary-500 dark:text-slate-400 dark:hover:text-primary-400"
+                      onClick={(e) => {
+                        e.stopPropagation(); // Предотвращаем применение пресета
+                        setEditingPresetId(preset.id);
+                      }}
+                      title="Редактировать"
+                    >
+                      <i className="fas fa-pen"></i>
+                    </button>
+                    <button
+                      className="p-2 text-slate-500 hover:text-red-500 dark:text-slate-400 dark:hover:text-red-400"
+                      onClick={(e) => {
+                        e.stopPropagation(); // Предотвращаем применение пресета
+                        removeThemePreset(preset.id);
+                      }}
+                    >
+                      <i className="fas fa-trash"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
 
             const renderWallpaperSettings = () => (
         <div className="settings-panel mb-6">
@@ -1370,6 +1596,7 @@ useEffect(() => {
                         </div>
                         
                         {renderWallpaperSettings()}
+                        {renderThemePresets()}
                         
 <div className="settings-panel mb-6">
     <h2 className="text-xl font-semibold mb-4 flex items-center gap-3">
@@ -1672,11 +1899,13 @@ useEffect(() => {
                             <div className="flex items-center rounded-lg shadow-lg search-container">
                                 <SelectChose
                                     value={searchQuery}
-                                    List={[
-                                        'как приручить дракона',
-                                        'как побриться'
-                                    ]}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    onSet={(q) => {
+                                        setSearchQuery(q);
+                                        handleSearch();
+                                    }}
+                                    onChange={(e) => {
+                                        setSearchQuery(e.target.value)
+                                    }}
                                     onKeyDown={handleSearchKeyDown}
                                     read_only={false}
                                     placeholder_text={`Поиск в ${currentSearchEngine.name}`}
