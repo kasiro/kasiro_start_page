@@ -90,6 +90,16 @@
                 @apply left-7;
             }
 
+            .category-content {
+                overflow: hidden;
+                transition: max-height 0.2s ease-out;
+            }
+
+            /* Добавьте этот класс для плавного появления/исчезновения */
+            .fade-transition {
+                transition: opacity 0.3s ease, transform 0.3s ease;
+            }
+
             .panel {
                 @apply bg-white dark:bg-dark-700 rounded-2xl p-6 shadow-lg;
             }
@@ -187,12 +197,6 @@
                 @apply grid grid-cols-3 gap-3 p-2;
             }
 
-            /* Анимация для сворачивания/разворачивания категорий */
-            .category-content {
-                overflow: hidden;
-                transition: max-height 0.3s ease-out;
-            }
-
             /* Обои - самый нижний слой */
             .wallpaper-overlay {
                 position: fixed;
@@ -231,7 +235,6 @@
             const [showWeather, setShowWeather] = useState(false);
             const [currentTime, setCurrentTime] = useState('');
             const [currentDate, setCurrentDate] = useState('');
-            const [city, setCity] = useState('Новосибирск');
             const [darkMode, setDarkMode] = useState(() => {
                 const saved = localStorage.getItem('darkMode');
                 return saved ? JSON.parse(saved) : false;
@@ -244,10 +247,6 @@
             const [editingSite, setEditingSite] = useState(null);
             const [selectedGroup, setSelectedGroup] = useState(null);
             const [newCustomIcon, setNewCustomIcon] = useState('');
-            const [cities] = useState([
-                'Москва', 'Санкт-Петербург', 'Екатеринбург', 
-                'Новосибирск', 'Казань', 'Сочи'
-            ]);
             const [searchQuery, setSearchQuery] = useState('');
             const [searchEngine, setSearchEngine] = useState(() => {
                 const saved = localStorage.getItem('searchEngine');
@@ -1014,6 +1013,17 @@ const SearchInput = ({ onSearch, placeholder }) => {
     if (saved) setHistory(JSON.parse(saved));
   }, []);
 
+  useEffect(() => {
+    localStorage.setItem('searchHistory', JSON.stringify(history));
+  }, [history]);
+
+
+  const removeFromHistory = (query) => {
+    setHistory([
+        ...history.filter(item => item.toLowerCase() !== query.trim().toLowerCase())
+    ]);
+  }
+
   // Сохранение в историю
   const saveToHistory = (query) => {
     if (!query.trim()) return;
@@ -1024,7 +1034,6 @@ const SearchInput = ({ onSearch, placeholder }) => {
     ].slice(0, 5);
     
     setHistory(updatedHistory);
-    localStorage.setItem('searchHistory', JSON.stringify(updatedHistory));
   };
 
   // Основной обработчик клавиш
@@ -1095,17 +1104,34 @@ const SearchInput = ({ onSearch, placeholder }) => {
       </div>
 
       {showHistory && history.length > 0 && (
-        <div className="absolute z-10 w-full mt-1 bg-white dark:bg-dark-700 rounded-lg shadow-lg border border-gray-200 dark:border-dark-600">
+        <div className="absolute z-10 w-full mt-1 bg_blur_5 rounded-lg shadow-lg border border-gray-200 dark:border-dark-600">
           <div className="py-1">
+            <div
+                className="px-4 py-1 cursor-pointer flex items-center justify-end"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => setHistory([])}
+              >
+                <span className="truncate">Отчистить</span>
+              </div>
             {history.map((item, i) => (
               <div
                 key={i}
-                className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-dark-600 cursor-pointer flex items-center"
+                className="px-4 py-2 cursor-pointer flex items-center justify-between"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => selectFromHistory(item)}
               >
-                <i className="far fa-clock text-gray-400 mr-2" />
-                <span className="truncate">{item}</span>
+                <div className="">
+                    <i className="far fa-clock text-gray-400 mr-2" />
+                    <span className="truncate">{item}</span>
+                </div>
+                <button 
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        removeFromHistory(item)
+                    }}
+                >
+                    <i className="fas fa-times mr-2" />
+                </button>
               </div>
             ))}
           </div>
@@ -1385,7 +1411,7 @@ const renderThemePresets = () => (
               {/* Основная карточка пресета - теперь кликабельная вся */}
               <div 
                 className={`p-4 rounded-lg border transition-all cursor-pointer ${
-                  wallpaper.type !== 'none' && preset.wallpaper.value === wallpaper.value
+                  wallpaper.type !== 'none' && preset.wallpaper.value === wallpaper.value && preset.primaryColor === primaryColor
                     ? 'border-primary-500 ring-2 ring-primary-500/20'
                     : 'border-slate-200 dark:border-dark-600 hover:border-slate-300 dark:hover:border-dark-500'
                 }`}
@@ -1405,7 +1431,7 @@ const renderThemePresets = () => (
                     </div>
                   )}
                   {/* Индикатор текущего пресета */}
-                  {wallpaper.type !== 'none' && preset.wallpaper.value === wallpaper.value && (
+                  {wallpaper.type !== 'none' && preset.wallpaper.value === wallpaper.value && preset.primaryColor === primaryColor && (
                     <div className="absolute top-2 left-2 bg-primary-500 text-white text-xs px-2 py-1 rounded-md">
                       Активно
                     </div>
@@ -1971,64 +1997,66 @@ const renderThemePresets = () => (
                                         <div 
                                             className={`category-content ${activeTab === 'all' ? (hiddenCategories.includes(group.id) ? 'max-h-0' : 'max-h-screen') : ''}`}
                                         >
-                                            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 gap-3">
-                                                {group.sites.map(site => (
-                                                    <a 
-                                                        key={site.id}
-                                                        className={`site-item flex flex-col items-center gap-1 shadow-none p-3 rounded-2xl panel cursor-pointer ${
-                                                            draggingSite?.id === site.id ? 'opacity-50' : ''
-                                                        } ${
-                                                            dragOverGroupId === group.id && dragOverSiteId === site.id 
-                                                                ? 'ring-2 ring-primary-500' 
-                                                                : ''
-                                                        }`}
-                                                        onClick={() => handleSiteClick(site.url)}
-                                                        draggable
-                                                        onDragStart={(e) => handleSiteDragStart(e, site, group.id)}
-                                                        onDragOver={(e) => handleSiteDragOver(e, group.id, site.id)}
-                                                        onDragEnd={handleSiteDragEnd}
-                                                        onDrop={(e) => handleSiteDrop(e, group.id, site.id)}
-                                                    >
-                                                        <div className={`w-10 h-10 rounded-xl text-primary-500 bg-accent bg-opacity-20 flex items-center justify-center`}>
-                                                            <span className="text-lg">
-                                                                {getIcon(site.icon)}
-                                                            </span>
-                                                        </div>
-                                                        <div className="text-xs font-medium text-center">{site.name}</div>
-                                                    </a>
-                                                ))}
+                                            <div className={`fade-transition ${activeTab === 'all' && hiddenCategories.includes(group.id) ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
+                                                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 gap-3">
+                                                    {group.sites.map(site => (
+                                                        <a 
+                                                            key={site.id}
+                                                            className={`site-item flex flex-col items-center gap-1 shadow-none p-3 rounded-2xl panel cursor-pointer ${
+                                                                draggingSite?.id === site.id ? 'opacity-50' : ''
+                                                            } ${
+                                                                dragOverGroupId === group.id && dragOverSiteId === site.id 
+                                                                    ? 'ring-2 ring-primary-500' 
+                                                                    : ''
+                                                            }`}
+                                                            onClick={() => handleSiteClick(site.url)}
+                                                            draggable
+                                                            onDragStart={(e) => handleSiteDragStart(e, site, group.id)}
+                                                            onDragOver={(e) => handleSiteDragOver(e, group.id, site.id)}
+                                                            onDragEnd={handleSiteDragEnd}
+                                                            onDrop={(e) => handleSiteDrop(e, group.id, site.id)}
+                                                        >
+                                                            <div className={`w-10 h-10 rounded-xl text-primary-500 bg-accent bg-opacity-20 flex items-center justify-center`}>
+                                                                <span className="text-lg">
+                                                                    {getIcon(site.icon)}
+                                                                </span>
+                                                            </div>
+                                                            <div className="text-xs font-medium text-center">{site.name}</div>
+                                                        </a>
+                                                    ))}
 
- 
-                                                {group.sites.length === 0 && (
-    <div 
-        className={`col-span-full flex flex-col items-center justify-center p-4 rounded-2xl cursor-pointer border-2 border-dashed ${
-            dragOverGroupId === group.id && dragOverSiteId === 'empty-group-drop' 
-                ? 'border-primary-500 ring-2 ring-primary-500' 
-                : 'border-slate-300 dark:border-dark-600'
-        }`}
-        onDragOver={(e) => handleSiteDragOver(e, group.id, 'empty-group-drop')}
-        onDrop={(e) => handleSiteDrop(e, group.id, 'empty-group-drop')}
-        onClick={() => openAddSiteForm(group.id)} // Добавляем возможность добавить сайт по клику на область
-    >
-        <div className="w-10 h-10 rounded-full bg-primary-500/10 flex items-center justify-center mb-2">
-            <i className="fas fa-plus text-primary-500"></i>
+     
+                                                    {group.sites.length === 0 && (
+        <div 
+            className={`col-span-full flex flex-col items-center justify-center p-4 rounded-2xl cursor-pointer border-2 border-dashed ${
+                dragOverGroupId === group.id && dragOverSiteId === 'empty-group-drop' 
+                    ? 'border-primary-500 ring-2 ring-primary-500' 
+                    : 'border-slate-300 dark:border-dark-600'
+            }`}
+            onDragOver={(e) => handleSiteDragOver(e, group.id, 'empty-group-drop')}
+            onDrop={(e) => handleSiteDrop(e, group.id, 'empty-group-drop')}
+            onClick={() => openAddSiteForm(group.id)} // Добавляем возможность добавить сайт по клику на область
+        >
+            <div className="w-10 h-10 rounded-full bg-primary-500/10 flex items-center justify-center mb-2">
+                <i className="fas fa-plus text-primary-500"></i>
+            </div>
+            <p className="font-medium text-sm">Перетащите сюда сайты</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">или нажмите, чтобы добавить</p>
         </div>
-        <p className="font-medium text-sm">Перетащите сюда сайты</p>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">или нажмите, чтобы добавить</p>
-    </div>
-)}
+    )}
 
-                                                {group.sites.length > 0 && (
-                <div 
-                    className="site-item flex flex-col items-center gap-1 p-3 rounded-2xl shadow-none panel cursor-pointer hover:bg-primary-100 dark:hover:bg-dark-700"
-                    onClick={() => openAddSiteForm(group.id)}
-                >
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center">
-                        <i className="fas fa-plus text-lg"></i>
+                                                    {group.sites.length > 0 && (
+                    <div 
+                        className="site-item flex flex-col items-center gap-1 p-3 rounded-2xl shadow-none panel cursor-pointer hover:bg-primary-100 dark:hover:bg-dark-700"
+                        onClick={() => openAddSiteForm(group.id)}
+                    >
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center">
+                            <i className="fas fa-plus text-lg"></i>
+                        </div>
+                        <div className="text-xs font-medium">Добавить</div>
                     </div>
-                    <div className="text-xs font-medium">Добавить</div>
-                </div>
-            )}
+                )}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
