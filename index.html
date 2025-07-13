@@ -50,12 +50,18 @@
 }
 
         @layer base {
+            html, body {
+                overflow: hidden;
+            }
             html {
                 @apply bg-slate-100 dark:bg-dark-900;
+                height: 100%;
             }
             body {
-                @apply bg-slate-100 text-slate-800 dark:bg-dark-900 dark:text-slate-200 min-h-screen p-5;
-                overflow: auto;
+                @apply bg-slate-100 text-slate-800 dark:bg-dark-900 dark:text-slate-200;
+                padding: 0;
+                margin: 0;
+                height: 100%;
             }
             .no-select {
                 -webkit-user-select: none;
@@ -195,7 +201,6 @@
 
             /* Обои - самый нижний слой */
             .wallpaper-overlay {
-                position: fixed;
                 width: 100%;
                 height: 100%;
                 top: 0;
@@ -204,6 +209,7 @@
                 bottom: 0;
                 z-index: 0;
                 transition: opacity 0.3s ease;
+                background-attachment: fixed;
                 background-size: cover;
                 background-position: center;
                 background-repeat: no-repeat;
@@ -212,6 +218,10 @@
             /* Основной контент */
             #root {
                 position: relative;
+                overflow-y: auto;
+                padding:20px;
+                width: 100%;
+                height: 100%;
                 z-index: 1;
             }
 
@@ -222,8 +232,8 @@
         }
     </style>
 </head>
-<body class="font-sans">
-    <div class="wallpaper-overlay"></div>
+<body class="font-sans wallpaper-overlay">
+    <!-- <div class="wallpaper-overlay"></div> -->
     <div id="root"></div>
 
     <script type="text/babel">
@@ -2064,8 +2074,8 @@ const renderThemePresets = () => (
                                 ))}
                             </div>
                         )}
-                        
-                        <footer className="mt-16 text-center text-slate-500 dark:text-slate-500 text-sm">
+
+                        <footer className="mt-16 text-center text-sm">
                             <p>Настроено с помощью SmartStart (kasiro Labs) • {new Date().getFullYear()}</p>
                         </footer>
                     </>
