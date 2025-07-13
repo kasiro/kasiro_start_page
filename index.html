@@ -55,11 +55,7 @@
             }
             body {
                 @apply bg-slate-100 text-slate-800 dark:bg-dark-900 dark:text-slate-200 min-h-screen p-5;
-                background-attachment: fixed;
-                background-size: contain;
-                background-position: center;
-                background-repeat: no-repeat;
-                transition: background-color 0.3s ease;
+                overflow: auto;
             }
             .no-select {
                 -webkit-user-select: none;
@@ -200,18 +196,23 @@
             /* Обои - самый нижний слой */
             .wallpaper-overlay {
                 position: fixed;
+                width: 100%;
+                height: 100%;
                 top: 0;
                 left: 0;
                 right: 0;
                 bottom: 0;
-                z-index: 0; /* Устанавливаем -1 чтобы контент был поверх */
+                z-index: 0;
                 transition: opacity 0.3s ease;
+                background-size: cover;
+                background-position: center;
+                background-repeat: no-repeat;
             }
 
             /* Основной контент */
             #root {
                 position: relative;
-                z-index: 1; /* Основной контент поверх обоев */
+                z-index: 1;
             }
 
             /* Модальные окна и настройки - поверх всего */
