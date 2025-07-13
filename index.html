@@ -97,7 +97,6 @@
                 transition: max-height 0.2s ease-out;
             }
 
-            /* Добавьте этот класс для плавного появления/исчезновения */
             .fade-transition {
                 transition: opacity 0.3s ease, transform 0.3s ease;
             }
@@ -201,6 +200,7 @@
 
             /* Обои - самый нижний слой */
             .wallpaper-overlay {
+                position: fixed;
                 width: 100%;
                 height: 100%;
                 top: 0;
@@ -209,6 +209,7 @@
                 bottom: 0;
                 z-index: 0;
                 transition: opacity 0.3s ease;
+                background: rgba(0, 0, 0, 1);
                 background-attachment: fixed;
                 background-size: cover;
                 background-position: center;
@@ -232,8 +233,8 @@
         }
     </style>
 </head>
-<body class="font-sans wallpaper-overlay">
-    <!-- <div class="wallpaper-overlay"></div> -->
+<body class="font-sans">
+    <div class="wallpaper-overlay"></div>
     <div id="root"></div>
 
     <script type="text/babel">
@@ -542,43 +543,6 @@ useEffect(() => {
             }
         };
                 
-            useEffect(() => {
-                if (true) return;
-                const config = tailwind.config;
-
-                if (!config || !config.theme?.extend?.colors?.dark) {
-                    console.error('Конфиг Tailwind не найден или dark цвета не определены');
-                } else {
-                    const definedShades = Object.keys(config.theme.extend.colors.dark);
-                    let errorCount = 0;
-
-                    document.querySelectorAll('*').forEach(element => {
-                        element.classList.forEach(className => {
-                            // Поиск всех вхождений dark-число в классах
-                            const match = className.match(/dark-(\d+)/);
-                            if (match) {
-                                const shade = match[1];
-                                if (!definedShades.includes(shade)) {
-                                    console.error(`Неопределенный dark оттенок: ${shade}`, element);
-                                    errorCount++;
-                                }
-                            }
-                        });
-                    });
-
-                    if (errorCount === 0) {
-                        console.log('✅ Все dark классы корректны');
-                    } else {
-                        console.log(`❌ Найдено ${errorCount} ошибок с dark классами`);
-                    }
-                }   
-            }, [
-                showSettings,
-                showGroupModal,
-                showSiteModal,
-                showIconManager
-            ]);
-            
             const [draggingSite, setDraggingSite] = useState(null);
             const [dragOverGroupId, setDragOverGroupId] = useState(null);
             const [dragOverSiteId, setDragOverSiteId] = useState(null);
@@ -1384,131 +1348,141 @@ const SearchInput = ({ onSearch, placeholder }) => {
 };
 
 const renderThemePresets = () => (
-      <div className="settings-panel mb-6">
-        <h2 className="text-xl font-semibold mb-4 flex items-center gap-3">
-          <i className="fas fa-palette"></i> Пресеты тем
-        </h2>
-        
-        {/* Форма создания нового пресета */}
-        <div className="mb-6 p-4 bg-slate-50 dark:bg-dark-800 rounded-lg">
-          <h3 className="font-medium mb-3">Создать новый пресет</h3>
-          <div className="flex flex-col gap-2">
-            <input
-              type="text"
-              value={newPresetName}
-              onChange={(e) => setNewPresetName(e.target.value)}
-              placeholder="Название пресета"
-              className="flex-1 p-2 rounded-lg bg-white dark:bg-dark-700 border border-slate-200 dark:border-dark-600"
-              onKeyDown={(e) => e.key === 'Enter' && addThemePreset()}
-            />
-            <button 
-              className="bg-primary-500 text-white px-4 py-2 rounded-lg hover:bg-primary-600 disabled:opacity-50"
-              onClick={addThemePreset}
-              disabled={!newPresetName.trim()}
-            >
-              <i className="fas fa-plus mr-2"></i>
-              Создать
-            </button>
-          </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-            Пресет сохранит текущие обои и цветовую схему
-          </p>
-        </div>
-        
-        {/* Список пресетов */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {themePresets.map(preset => (
-            <div key={preset.id} className="relative group">
-              {/* Основная карточка пресета - теперь кликабельная вся */}
-              <div 
-                className={`p-4 rounded-lg border transition-all cursor-pointer ${
-                  wallpaper.type !== 'none' && preset.wallpaper.value === wallpaper.value && preset.primaryColor === primaryColor
-                    ? 'border-primary-500 ring-2 ring-primary-500/20'
-                    : 'border-slate-200 dark:border-dark-600 hover:border-slate-300 dark:hover:border-dark-500'
-                }`}
-                onClick={() => applyThemePreset(preset)}
-              >
-                {/* Превью обоев */}
-                <div className="relative h-24 mb-3 rounded-md overflow-hidden bg-slate-100 dark:bg-dark-700">
-                  {preset.wallpaper.type === 'image' ? (
-                    <img 
-                      src={preset.wallpaper.value} 
-                      alt={preset.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-slate-400 dark:text-slate-500">
-                      <i className="fas fa-image text-2xl"></i>
-                    </div>
-                  )}
-                  {/* Индикатор текущего пресета */}
-                  {wallpaper.type !== 'none' && preset.wallpaper.value === wallpaper.value && preset.primaryColor === primaryColor && (
-                    <div className="absolute top-2 left-2 bg-primary-500 text-white text-xs px-2 py-1 rounded-md">
-                      Активно
-                    </div>
-                  )}
+  <div className="settings-panel mb-6">
+    <h2 className="text-xl font-semibold mb-4 flex items-center gap-3">
+      <i className="fas fa-palette"></i> Пресеты тем
+    </h2>
+    
+    {/* Форма создания нового пресета */}
+    <div className="mb-6 p-4 bg-slate-50 dark:bg-dark-800 rounded-lg">
+      <h3 className="font-medium mb-3">Создать новый пресет</h3>
+      <div className="flex flex-col gap-2">
+        <input
+          type="text"
+          value={newPresetName}
+          onChange={(e) => setNewPresetName(e.target.value)}
+          placeholder="Название пресета"
+          className="flex-1 p-2 rounded-lg bg-white dark:bg-dark-700 border border-slate-200 dark:border-dark-600"
+          onKeyDown={(e) => e.key === 'Enter' && addThemePreset()}
+        />
+        <button 
+          className="bg-primary-500 text-white px-4 py-2 rounded-lg hover:bg-primary-600 disabled:opacity-50"
+          onClick={addThemePreset}
+          disabled={!newPresetName.trim()}
+        >
+          <i className="fas fa-plus mr-2"></i>
+          Создать
+        </button>
+      </div>
+      <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+        Пресет сохранит текущие обои и цветовую схему
+      </p>
+    </div>
+    
+    {/* Список пресетов */}
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {themePresets.map(preset => (
+        <div key={preset.id} className="relative group">
+          {/* Основная карточка пресета */}
+          <div 
+            className={`p-4 rounded-lg border transition-all cursor-pointer ${
+              (wallpaper.type === preset.wallpaper.type && 
+               wallpaper.value === preset.wallpaper.value && 
+               wallpaper.opacity === preset.wallpaper.opacity &&
+               primaryColor.hue === preset.primaryColor.hue &&
+               primaryColor.saturation === preset.primaryColor.saturation &&
+               primaryColor.lightness === preset.primaryColor.lightness)
+                ? 'border-primary-500 ring-2 ring-primary-500/20'
+                : 'border-slate-200 dark:border-dark-600 hover:border-slate-300 dark:hover:border-dark-500'
+            }`}
+            onClick={() => applyThemePreset(preset)}
+          >
+            {/* Превью обоев */}
+            <div className="relative h-24 mb-3 rounded-md overflow-hidden bg-slate-100 dark:bg-dark-700">
+              {preset.wallpaper.type === 'image' ? (
+                <img 
+                  src={preset.wallpaper.value} 
+                  alt={preset.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-slate-400 dark:text-slate-500">
+                  <i className="fas fa-image text-2xl"></i>
                 </div>
-                
-                {/* Информация о пресете */}
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1">
-                    {editingPresetId === preset.id ? (
-                      <input
-                        type="text"
-                        defaultValue={preset.name}
-                        autoFocus
-                        onBlur={(e) => updatePresetName(preset.id, e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') updatePresetName(preset.id, e.target.value);
-                          if (e.key === 'Escape') setEditingPresetId(null);
-                        }}
-                        className="w-full bg-transparent border-b border-slate-300 dark:border-dark-500 focus:border-primary-500 outline-none"
-                      />
-                    ) : (
-                      <h3 className="font-medium truncate">{preset.name}</h3>
-                    )}
-                    <div className="flex items-center mt-2">
-                      <div 
-                        className="w-4 h-4 rounded-full mr-2 border border-slate-200 dark:border-dark-600"
-                        style={{
-                          backgroundColor: `hsl(${preset.primaryColor.hue}, ${preset.primaryColor.saturation}%, ${preset.primaryColor.lightness}%)`
-                        }}
-                      ></div>
-                      <span className="text-xs text-slate-500 dark:text-slate-400">
-                        {new Date(preset.createdAt).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {/* Кнопки действий - теперь только редактирование и удаление */}
-                  <div className="flex gap-1">
-                    <button
-                      className="p-2 text-slate-500 hover:text-primary-500 dark:text-slate-400 dark:hover:text-primary-400"
-                      onClick={(e) => {
-                        e.stopPropagation(); // Предотвращаем применение пресета
-                        setEditingPresetId(preset.id);
-                      }}
-                      title="Редактировать"
-                    >
-                      <i className="fas fa-pen"></i>
-                    </button>
-                    <button
-                      className="p-2 text-slate-500 hover:text-red-500 dark:text-slate-400 dark:hover:text-red-400"
-                      onClick={(e) => {
-                        e.stopPropagation(); // Предотвращаем применение пресета
-                        removeThemePreset(preset.id);
-                      }}
-                    >
-                      <i className="fas fa-trash"></i>
-                    </button>
-                  </div>
+              )}
+              {/* Индикатор текущего пресета */}
+              {(wallpaper.type === preset.wallpaper.type && 
+                wallpaper.value === preset.wallpaper.value && 
+                wallpaper.opacity === preset.wallpaper.opacity &&
+                primaryColor.hue === preset.primaryColor.hue &&
+                primaryColor.saturation === preset.primaryColor.saturation &&
+                primaryColor.lightness === preset.primaryColor.lightness) && (
+                <div className="absolute top-2 left-2 bg-primary-500 text-white text-xs px-2 py-1 rounded-md">
+                  Активно
+                </div>
+              )}
+            </div>
+            
+            {/* Информация о пресете */}
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1">
+                {editingPresetId === preset.id ? (
+                  <input
+                    type="text"
+                    defaultValue={preset.name}
+                    autoFocus
+                    onBlur={(e) => updatePresetName(preset.id, e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') updatePresetName(preset.id, e.target.value);
+                      if (e.key === 'Escape') setEditingPresetId(null);
+                    }}
+                    className="w-full bg-transparent border-b border-slate-300 dark:border-dark-500 focus:border-primary-500 outline-none"
+                  />
+                ) : (
+                  <h3 className="font-medium truncate">{preset.name}</h3>
+                )}
+                <div className="flex items-center mt-2">
+                  <div 
+                    className="w-4 h-4 rounded-full mr-2 border border-slate-200 dark:border-dark-600"
+                    style={{
+                      backgroundColor: `hsl(${preset.primaryColor.hue}, ${preset.primaryColor.saturation}%, ${preset.primaryColor.lightness}%)`
+                    }}
+                  ></div>
+                  <span className="text-xs text-slate-500 dark:text-slate-400">
+                    {new Date(preset.createdAt).toLocaleDateString()}
+                  </span>
                 </div>
               </div>
+              
+              {/* Кнопки действий */}
+              <div className="flex gap-1">
+                <button
+                  className="p-2 text-slate-500 hover:text-primary-500 dark:text-slate-400 dark:hover:text-primary-400"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditingPresetId(preset.id);
+                  }}
+                  title="Редактировать"
+                >
+                  <i className="fas fa-pen"></i>
+                </button>
+                <button
+                  className="p-2 text-slate-500 hover:text-red-500 dark:text-slate-400 dark:hover:text-red-400"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeThemePreset(preset.id);
+                  }}
+                >
+                  <i className="fas fa-trash"></i>
+                </button>
+              </div>
             </div>
-          ))}
+          </div>
         </div>
-      </div>
-    );
+      ))}
+    </div>
+  </div>
+);
 
             const renderWallpaperSettings = () => (
         <div className="settings-panel mb-6">
