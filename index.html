@@ -47,6 +47,8 @@
     --accent-hue: 250;
     --accent-saturation: 99%;
     --accent-lightness: 79%;
+
+    --keyboard-offset: 0;
 }
 
         @layer base {
@@ -222,6 +224,8 @@
                 width: 100%;
                 height: 100%;
                 z-index: 1;
+                padding-bottom: calc(20px + var(--keyboard-offset));
+                transition: padding-bottom 0.3s ease;
             }
 
             .modal-overlay, .settings-panel {
@@ -231,6 +235,13 @@
             .dock-bar {
                 @apply fixed bottom-0 left-0 right-0;
                 @apply flex justify-center items-center py-3 px-4 z-40;
+                
+                margin-bottom: env(safe-area-inset-bottom, 0);
+                transition: transform 0.3s ease;
+            }
+
+            .dock-bar-hidden {
+                transform: translateY(100%);
             }
 
             .dock-container {
@@ -1057,6 +1068,39 @@ const SearchInput = ({ onSearch, placeholder }) => {
   const [showHistory, setShowHistory] = useState(false);
   const [focused, setFocused] = useState(false);
   const inputRef = useRef(null);
+  
+  useEffect(() => {
+    const handleFocus = () => {
+      const dockBar = document.querySelector('.dock-bar');
+      if (dockBar) {
+        dockBar.classList.add('dock-bar-hidden');
+      }
+      
+      // Добавляем отступ для мобильных устройств
+      document.documentElement.style.setProperty('--keyboard-offset', '300px');
+    };
+
+    const handleBlur = () => {
+      const dockBar = document.querySelector('.dock-bar');
+      if (dockBar) {
+        dockBar.classList.remove('dock-bar-hidden');
+      }
+      
+      // Убираем отступ
+      document.documentElement.style.setProperty('--keyboard-offset', '0');
+    };
+
+    const input = inputRef.current;
+    if (input) {
+      input.addEventListener('focus', handleFocus);
+      input.addEventListener('blur', handleBlur);
+      
+      return () => {
+        input.removeEventListener('focus', handleFocus);
+        input.removeEventListener('blur', handleBlur);
+      };
+    }
+  }, []);
 
   // Загрузка истории при монтировании
   useEffect(() => {
@@ -1685,19 +1729,42 @@ const renderThemePresets = () => (
                         className="flex-1 p-2 rounded-lg bg-slate-100 dark:bg-dark-600"
                         id="wallpaperUrlInput"
                     />
-                    <button 
-                        className="bg-primary-500 text-white px-4 py-2 rounded-lg"
-                        onClick={() => {
-                            const input = document.getElementById('wallpaperUrlInput');
-                            addWallpaper(input.value);
-                            input.value = '';
+                    <input
+                        type="file"
+                        id="wallpaperFileInput"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                            const file = e.target.files[0];
+                            if (file) {
+                                const blobUrl = URL.createObjectURL(file);
+                                addWallpaper(blobUrl);
+                                updateWallpaper('image', blobUrl);
+                            }
                         }}
-                    >
-                        Добавить
-                    </button>
+                    />
+                    <div className="flex gap-2">
+                        <button 
+                            className="flex-1 bg-primary-500 text-white px-4 py-2 rounded-lg hover:bg-primary-600"
+                            onClick={() => {
+                                const input = document.getElementById('wallpaperUrlInput');
+                                addWallpaper(input.value);
+                                input.value = '';
+                            }}
+                        >
+                            Добавить по URL
+                        </button>
+                        <button 
+                            className="flex-1 bg-slate-200 dark:bg-dark-700 px-4 py-2 rounded-lg hover:bg-slate-300 dark:hover:bg-dark-600"
+                            onClick={() => document.getElementById('wallpaperFileInput').click()}
+                        >
+                            <i className="fas fa-upload mr-2"></i>
+                            Загрузить файл
+                        </button>
+                    </div>
                 </div>
             </div>
-            
+
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <button 
                     className="h-20 rounded-lg bg-slate-100 dark:bg-dark-800 flex items-center justify-center"
@@ -1712,17 +1779,20 @@ const renderThemePresets = () => (
                             className="h-20 rounded-lg overflow-hidden relative w-full"
                             onClick={() => updateWallpaper(wp.type, wp.value)}
                         >
-                            {wp.type === 'gradient' ? (
-                                <div 
-                                    className="absolute inset-0"
-                                    style={{ background: wp.value }}
-                                ></div>
-                            ) : (
+                            {wp.type === 'image' ? (
                                 <img 
-                                    src={wp.value}
+                                    src={wp.value} 
                                     alt={wp.name}
                                     className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                        // Обработка ошибок загрузки изображения
+                                        e.target.style.display = 'none';
+                                    }}
                                 />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center text-slate-400 dark:text-slate-500">
+                                    <i className="fas fa-image text-2xl"></i>
+                                </div>
                             )}
                             <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-2 text-sm">
                                 {wp.name}

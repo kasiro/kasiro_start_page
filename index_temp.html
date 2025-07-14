@@ -1210,6 +1210,8 @@ const DockBar = () => {
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+
+    const activeHiddenTabs = hiddenTabs.find(tab => tab.id === activeTab);
     
     return (
         <div className="dock-bar">
@@ -1244,11 +1246,15 @@ const DockBar = () => {
                             onClick={() => setShowMoreMenu(!showMoreMenu)}
                             title="Дополнительные вкладки"
                         >
-                            <i className="fas fa-ellipsis-h"></i>
-                            {hiddenTabs.some(tab => tab.id === activeTab) && (
-                                <span className="dock-tab-text">
-                                    {hiddenTabs.find(tab => tab.id === activeTab)?.name}
-                                </span>
+                            {hiddenTabs.some(tab => tab.id === activeTab) ? (
+                                <>
+                                    {getIcon(activeHiddenTabs?.icon)}
+                                    <span className="dock-tab-text">
+                                        {activeHiddenTabs?.name}
+                                    </span>
+                                </>
+                            ) : (
+                                <i className="fas fa-bars"></i>
                             )}
                         </button>
                         
@@ -1777,60 +1783,95 @@ const renderThemePresets = () => (
                             </div>
                         </div>
 
-<div className="settings-panel mb-6">
+                        <div className="settings-panel mb-6">
     <h2 className="text-xl font-semibold mb-4 flex items-center gap-3">
         <i className="fas fa-layer-group"></i> Расположение вкладок
     </h2>
     
-    <div className="space-y-4">
-        <div className="flex items-center justify-between py-3">
-            <div className="flex items-center gap-3">
-                <i className="fas fa-window-restore"></i>
-                <span>Вкладки вверху</span>
+    {/* Сегментированный переключатель */}
+    <div className="relative bg-slate-100 dark:bg-dark-800 p-1 rounded-xl inline-flex">
+        {/* Активный индикатор */}
+        <div 
+            className={`absolute top-1 bottom-1 rounded-lg bg-white dark:bg-dark-900 shadow-sm transition-all duration-300 ${
+                tabLayout === 'tabs' ? 'left-1 w-[calc(50%-8px)]' : 'left-[calc(50%+4px)] w-[calc(50%-12px)]'
+            }`}
+        />
+        
+        {/* Варианты */}
+        <button
+            className={`relative z-10 px-6 py-2 rounded-lg text-sm font-medium transition-colors ${
+                tabLayout === 'tabs' 
+                    ? 'text-primary-500' 
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+            }`}
+            onClick={() => setTabLayout('tabs')}
+        >
+            <div className="flex items-center gap-2">
+                <i className="fas fa-align-left"></i>
+                <span>Вкладки</span>
             </div>
-            <label className="flex items-center cursor-pointer">
-                <input 
-                    type="radio" 
-                    className="hidden" 
-                    name="tabLayout"
-                    checked={tabLayout === 'tabs'}
-                    onChange={() => setTabLayout('tabs')}
-                />
-                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                    tabLayout === 'tabs' 
-                        ? 'border-primary-500 bg-primary-500' 
-                        : 'border-slate-300 dark:border-dark-600'
-                }`}>
-                    {tabLayout === 'tabs' && <div className="w-3 h-3 rounded-full bg-white"></div>}
-                </div>
-            </label>
+        </button>
+        
+        <button
+            className={`relative z-10 px-6 py-2 rounded-lg text-sm font-medium transition-colors ${
+                tabLayout === 'dock' 
+                    ? 'text-primary-500' 
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+            }`}
+            onClick={() => setTabLayout('dock')}
+        >
+            <div className="flex items-center gap-2">
+                <i className="fas fa-window-maximize"></i>
+                <span>Док-бар</span>
+            </div>
+        </button>
+    </div>
+    
+    {/* Динамическое превью */}
+    <div className="mt-6 border border-slate-200 dark:border-dark-700 rounded-xl overflow-hidden">
+        {/* Заголовок превью */}
+        <div className="bg-slate-50 dark:bg-dark-800 px-4 py-2 border-b border-slate-200 dark:border-dark-700">
+            <h3 className="font-medium text-sm">Предпросмотр</h3>
         </div>
         
-        <div className="flex items-center justify-between py-3">
-            <div className="flex items-center gap-3">
-                <i className="fas fa-dock"></i>
-                <span>Док-бар внизу</span>
-            </div>
-            <label className="flex items-center cursor-pointer">
-                <input 
-                    type="radio" 
-                    className="hidden" 
-                    name="tabLayout"
-                    checked={tabLayout === 'dock'}
-                    onChange={() => setTabLayout('dock')}
-                />
-                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                    tabLayout === 'dock' 
-                        ? 'border-primary-500 bg-primary-500' 
-                        : 'border-slate-300 dark:border-dark-600'
-                }`}>
-                    {tabLayout === 'dock' && <div className="w-3 h-3 rounded-full bg-white"></div>}
+        {/* Контент превью */}
+        <div className="relative items-center h-40 bg-white dark:bg-dark-900">
+            {/* Вкладки (если выбрано) */}
+            {tabLayout === 'tabs' && (
+                <div className="absolute top-0 left-0 right-0 h-10 flex px-3 pt-2 gap-1 bg-slate-50 dark:bg-dark-800">
+                    <div className="h-8 rounded-lg bg-primary-500 w-1/4 flex items-center justify-center">
+                        <span className="text-xs text-white">Активная</span>
+                    </div>
+                    <div className="h-8 rounded-lg bg-slate-200 dark:bg-dark-700 w-1/4"></div>
+                    <div className="h-8 rounded-lg bg-slate-200 dark:bg-dark-700 w-1/4"></div>
+                    <div className="h-8 rounded-lg bg-slate-200 dark:bg-dark-700 w-1/4"></div>
                 </div>
-            </label>
+            )}
+            
+            {/* Основной контент */}
+            <div className={`absolute ${
+                tabLayout === 'tabs' ? 'top-10' : 'top-0'
+            } bottom-0 left-0 right-0 flex items-center justify-center bg-slate-50 dark:bg-dark-800`}>
+                <div className="text-slate-400 dark:text-slate-600 text-sm">
+                    Контент
+                </div>
+            </div>
+            
+            {/* Док-бар (если выбрано) */}
+            {tabLayout === 'dock' && (
+                <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 w-4/5 h-12 bg-white dark:bg-dark-800 rounded-xl shadow-lg flex items-center justify-around px-4">
+                    <div className="w-8 h-8 rounded-md bg-primary-500 flex items-center justify-center">
+                        <i className="fas fa-home text-white text-xs"></i>
+                    </div>
+                    <div className="w-8 h-8 rounded-md bg-slate-200 dark:bg-dark-700"></div>
+                    <div className="w-8 h-8 rounded-md bg-slate-200 dark:bg-dark-700"></div>
+                    <div className="w-8 h-8 rounded-md bg-slate-200 dark:bg-dark-700"></div>
+                </div>
+            )}
         </div>
     </div>
 </div>
-                        
+
                         {renderWallpaperSettings()}
                         {renderThemePresets()}
                         
