@@ -50,19 +50,18 @@
 }
 
         @layer base {
+            html, body {
+                overflow: hidden;
+            }
             html {
                 @apply bg-slate-100 dark:bg-dark-900;
+                height: 100%;
             }
             body {
-                @apply bg-slate-100 text-slate-800 dark:bg-dark-900 dark:text-slate-200 min-h-screen p-5;
-                overflow: auto;
-                /*
-                background-attachment: fixed;
-                background-size: cover;
-                background-position: center;
-                background-repeat: no-repeat;
-                */
-
+                @apply bg-slate-100 text-slate-800 dark:bg-dark-900 dark:text-slate-200;
+                padding: 0;
+                margin: 0;
+                height: 100%;
             }
             .no-select {
                 -webkit-user-select: none;
@@ -98,7 +97,6 @@
                 transition: max-height 0.2s ease-out;
             }
 
-            /* Добавьте этот класс для плавного появления/исчезновения */
             .fade-transition {
                 transition: opacity 0.3s ease, transform 0.3s ease;
             }
@@ -112,7 +110,6 @@
                 backdrop-filter: blur(5px);
             }
 
-            /* Ширина строки поиска */
             .search-container {
                 @apply w-full max-w-2xl mx-auto;
             }
@@ -211,6 +208,7 @@
                 bottom: 0;
                 z-index: 0;
                 transition: opacity 0.3s ease;
+                background-attachment: fixed;
                 background-size: cover;
                 background-position: center;
                 background-repeat: no-repeat;
@@ -219,13 +217,86 @@
             /* Основной контент */
             #root {
                 position: relative;
+                overflow-y: auto;
+                padding:20px;
+                width: 100%;
+                height: 100%;
                 z-index: 1;
             }
 
-            /* Модальные окна и настройки - поверх всего */
             .modal-overlay, .settings-panel {
-                z-index: 50; /* Достаточно высокий для модальных окон */
+                z-index: 50;
             }
+
+            .dock-bar {
+                @apply fixed bottom-0 left-0 right-0;
+                @apply flex justify-center items-center py-3 px-4 z-40;
+            }
+
+            .dock-container {
+                @apply flex w-full max-w-md h-full items-center justify-between gap-1 rounded-2xl px-3 py-2;
+                @apply bg-white/80 dark:bg-dark-700/80;
+                backdrop-filter: blur(10px);
+                @apply border-2 border-slate-200/50 dark:border-dark-600/50;
+            }
+
+            .dock-tab {
+                @apply flex items-center justify-center p-3 rounded-lg;
+                @apply transition-all duration-200 ease-out;
+                min-width: 44px;
+                height: 44px;
+                position: relative;
+            }
+
+            .dock-tab-active {
+                @apply text-primary-500;
+            }
+
+            .dock-tab-active::after {
+                content: '';
+                @apply absolute bottom-0 left-1/2 w-6 h-1 bg-primary-500 rounded-full;
+                transform: translateX(-50%);
+                animation: dockTabActive 0.3s ease-out;
+            }
+
+            .dock-tab-inactive {
+                @apply text-slate-600 dark:text-slate-300 hover:bg-slate-100/50 dark:hover:bg-dark-600/50;
+            }
+
+            .dock-tab-text {
+                @apply ml-2 font-medium;
+                animation: fadeIn 0.3s ease-out;
+            }
+
+            .dock-more-menu {
+                @apply absolute bottom-full mb-3 right-0;
+                @apply bg-white/90 dark:bg-dark-700/90 backdrop-blur-md rounded-xl shadow-xl;
+                @apply p-3 min-w-[160px] max-h-[300px] overflow-y-auto;
+                @apply border border-slate-200/50 dark:border-dark-600/50;
+                animation: slideUp 0.2s ease-out;
+            }
+
+            .dock-more-item {
+                @apply flex items-center gap-2 py-1 px-2 rounded-lg whitespace-nowrap;
+                @apply text-dark-600 dark:text-slate-200 hover:bg-slate-100/50 dark:hover:bg-dark-700/50;
+                transition: background-color 0.2s ease;
+            }
+
+            @keyframes dockTabActive {
+                from { width: 0; opacity: 0; }
+                to { width: 24px; opacity: 1; }
+            }
+
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateX(-5px); }
+                to { opacity: 1; transform: translateX(0); }
+            }
+
+            @keyframes slideUp {
+                from { opacity: 0; transform: translateY(5px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+
         }
     </style>
 </head>
@@ -272,6 +343,15 @@
                 { name: 'Яндекс', url: 'https://yandex.ru/search/?text=%s' }
             ];
         });
+
+        const [tabLayout, setTabLayout] = useState(() => {
+    const saved = localStorage.getItem('tabLayout');
+    return saved ? JSON.parse(saved) : 'tabs'; // 'tabs' или 'dock'
+});
+
+useEffect(() => {
+    localStorage.setItem('tabLayout', JSON.stringify(tabLayout));
+}, [tabLayout]);
 
 const [themePresets, setThemePresets] = useState(() => {
     const saved = localStorage.getItem('themePresets');
@@ -539,43 +619,6 @@ useEffect(() => {
             }
         };
                 
-            useEffect(() => {
-                if (true) return;
-                const config = tailwind.config;
-
-                if (!config || !config.theme?.extend?.colors?.dark) {
-                    console.error('Конфиг Tailwind не найден или dark цвета не определены');
-                } else {
-                    const definedShades = Object.keys(config.theme.extend.colors.dark);
-                    let errorCount = 0;
-
-                    document.querySelectorAll('*').forEach(element => {
-                        element.classList.forEach(className => {
-                            // Поиск всех вхождений dark-число в классах
-                            const match = className.match(/dark-(\d+)/);
-                            if (match) {
-                                const shade = match[1];
-                                if (!definedShades.includes(shade)) {
-                                    console.error(`Неопределенный dark оттенок: ${shade}`, element);
-                                    errorCount++;
-                                }
-                            }
-                        });
-                    });
-
-                    if (errorCount === 0) {
-                        console.log('✅ Все dark классы корректны');
-                    } else {
-                        console.log(`❌ Найдено ${errorCount} ошибок с dark классами`);
-                    }
-                }   
-            }, [
-                showSettings,
-                showGroupModal,
-                showSiteModal,
-                showIconManager
-            ]);
-            
             const [draggingSite, setDraggingSite] = useState(null);
             const [dragOverGroupId, setDragOverGroupId] = useState(null);
             const [dragOverSiteId, setDragOverSiteId] = useState(null);
@@ -1149,6 +1192,94 @@ const SearchInput = ({ onSearch, placeholder }) => {
   );
 };
 
+const DockBar = () => {
+    const [showMoreMenu, setShowMoreMenu] = useState(false);
+    const moreMenuRef = useRef(null);
+    
+    const maxVisibleTabs = 4;
+    const visibleTabs = tabs.length <= maxVisibleTabs ? tabs : tabs.slice(0, maxVisibleTabs - 1);
+    const hiddenTabs = tabs.length <= maxVisibleTabs ? [] : tabs.slice(maxVisibleTabs - 1);
+    
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (moreMenuRef.current && !moreMenuRef.current.contains(event.target)) {
+                setShowMoreMenu(false);
+            }
+        };
+        
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+    
+    return (
+        <div className="dock-bar">
+            <div className="dock-container">
+                {visibleTabs.map(tab => (
+                    <button
+                        key={tab.id}
+                        className={`dock-tab ${
+                            activeTab === tab.id ? 'dock-tab-active' : 'dock-tab-inactive'
+                        }`}
+                        onClick={() => {
+                            setActiveTab(tab.id);
+                            scrollTabIntoView(tab.id);
+                        }}
+                        title={tab.name}
+                    >
+                        {getIcon(tab.icon)}
+                        {activeTab === tab.id && (
+                            <span className="dock-tab-text">{tab.name}</span>
+                        )}
+                    </button>
+                ))}
+                
+                {hiddenTabs.length > 0 && (
+                    <div className="relative" ref={moreMenuRef}>
+                        <button
+                            className={`dock-tab ${
+                                hiddenTabs.some(tab => tab.id === activeTab) 
+                                    ? 'dock-tab-active' 
+                                    : 'dock-tab-inactive'
+                            }`}
+                            onClick={() => setShowMoreMenu(!showMoreMenu)}
+                            title="Дополнительные вкладки"
+                        >
+                            <i className="fas fa-ellipsis-h"></i>
+                            {hiddenTabs.some(tab => tab.id === activeTab) && (
+                                <span className="dock-tab-text">
+                                    {hiddenTabs.find(tab => tab.id === activeTab)?.name}
+                                </span>
+                            )}
+                        </button>
+                        
+                        {showMoreMenu && (
+                            <div className="dock-more-menu">
+                                {hiddenTabs.map(tab => (
+                                    <button
+                                        key={tab.id}
+                                        className="dock-more-item"
+                                        onClick={() => {
+                                            setActiveTab(tab.id);
+                                            scrollTabIntoView(tab.id);
+                                            setShowMoreMenu(false);
+                                        }}
+                                    >
+                                        {getIcon(tab.icon)}
+                                        <span>{tab.name}</span>
+                                        {activeTab === tab.id && (
+                                            <i className="fas fa-check ml-auto text-primary-500"></i>
+                                        )}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
             // Рендеринг модального окна группы
             const renderGroupModal = () => {
                 return (
@@ -1381,131 +1512,141 @@ const SearchInput = ({ onSearch, placeholder }) => {
 };
 
 const renderThemePresets = () => (
-      <div className="settings-panel mb-6">
-        <h2 className="text-xl font-semibold mb-4 flex items-center gap-3">
-          <i className="fas fa-palette"></i> Пресеты тем
-        </h2>
-        
-        {/* Форма создания нового пресета */}
-        <div className="mb-6 p-4 bg-slate-50 dark:bg-dark-800 rounded-lg">
-          <h3 className="font-medium mb-3">Создать новый пресет</h3>
-          <div className="flex flex-col gap-2">
-            <input
-              type="text"
-              value={newPresetName}
-              onChange={(e) => setNewPresetName(e.target.value)}
-              placeholder="Название пресета"
-              className="flex-1 p-2 rounded-lg bg-white dark:bg-dark-700 border border-slate-200 dark:border-dark-600"
-              onKeyDown={(e) => e.key === 'Enter' && addThemePreset()}
-            />
-            <button 
-              className="bg-primary-500 text-white px-4 py-2 rounded-lg hover:bg-primary-600 disabled:opacity-50"
-              onClick={addThemePreset}
-              disabled={!newPresetName.trim()}
-            >
-              <i className="fas fa-plus mr-2"></i>
-              Создать
-            </button>
-          </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-            Пресет сохранит текущие обои и цветовую схему
-          </p>
-        </div>
-        
-        {/* Список пресетов */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {themePresets.map(preset => (
-            <div key={preset.id} className="relative group">
-              {/* Основная карточка пресета - теперь кликабельная вся */}
-              <div 
-                className={`p-4 rounded-lg border transition-all cursor-pointer ${
-                  wallpaper.type !== 'none' && preset.wallpaper.value === wallpaper.value && preset.primaryColor === primaryColor
-                    ? 'border-primary-500 ring-2 ring-primary-500/20'
-                    : 'border-slate-200 dark:border-dark-600 hover:border-slate-300 dark:hover:border-dark-500'
-                }`}
-                onClick={() => applyThemePreset(preset)}
-              >
-                {/* Превью обоев */}
-                <div className="relative h-24 mb-3 rounded-md overflow-hidden bg-slate-100 dark:bg-dark-700">
-                  {preset.wallpaper.type === 'image' ? (
-                    <img 
-                      src={preset.wallpaper.value} 
-                      alt={preset.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-slate-400 dark:text-slate-500">
-                      <i className="fas fa-image text-2xl"></i>
-                    </div>
-                  )}
-                  {/* Индикатор текущего пресета */}
-                  {wallpaper.type !== 'none' && preset.wallpaper.value === wallpaper.value && preset.primaryColor === primaryColor && (
-                    <div className="absolute top-2 left-2 bg-primary-500 text-white text-xs px-2 py-1 rounded-md">
-                      Активно
-                    </div>
-                  )}
+  <div className="settings-panel mb-6">
+    <h2 className="text-xl font-semibold mb-4 flex items-center gap-3">
+      <i className="fas fa-palette"></i> Пресеты тем
+    </h2>
+    
+    {/* Форма создания нового пресета */}
+    <div className="mb-6 p-4 bg-slate-50 dark:bg-dark-800 rounded-lg">
+      <h3 className="font-medium mb-3">Создать новый пресет</h3>
+      <div className="flex flex-col gap-2">
+        <input
+          type="text"
+          value={newPresetName}
+          onChange={(e) => setNewPresetName(e.target.value)}
+          placeholder="Название пресета"
+          className="flex-1 p-2 rounded-lg bg-white dark:bg-dark-700 border border-slate-200 dark:border-dark-600"
+          onKeyDown={(e) => e.key === 'Enter' && addThemePreset()}
+        />
+        <button 
+          className="bg-primary-500 text-white px-4 py-2 rounded-lg hover:bg-primary-600 disabled:opacity-50"
+          onClick={addThemePreset}
+          disabled={!newPresetName.trim()}
+        >
+          <i className="fas fa-plus mr-2"></i>
+          Создать
+        </button>
+      </div>
+      <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+        Пресет сохранит текущие обои и цветовую схему
+      </p>
+    </div>
+    
+    {/* Список пресетов */}
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {themePresets.map(preset => (
+        <div key={preset.id} className="relative group">
+          {/* Основная карточка пресета */}
+          <div 
+            className={`p-4 rounded-lg border transition-all cursor-pointer ${
+              (wallpaper.type === preset.wallpaper.type && 
+               wallpaper.value === preset.wallpaper.value && 
+               wallpaper.opacity === preset.wallpaper.opacity &&
+               primaryColor.hue === preset.primaryColor.hue &&
+               primaryColor.saturation === preset.primaryColor.saturation &&
+               primaryColor.lightness === preset.primaryColor.lightness)
+                ? 'border-primary-500 ring-2 ring-primary-500/20'
+                : 'border-slate-200 dark:border-dark-600 hover:border-slate-300 dark:hover:border-dark-500'
+            }`}
+            onClick={() => applyThemePreset(preset)}
+          >
+            {/* Превью обоев */}
+            <div className="relative h-24 mb-3 rounded-md overflow-hidden bg-slate-100 dark:bg-dark-700">
+              {preset.wallpaper.type === 'image' ? (
+                <img 
+                  src={preset.wallpaper.value} 
+                  alt={preset.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-slate-400 dark:text-slate-500">
+                  <i className="fas fa-image text-2xl"></i>
                 </div>
-                
-                {/* Информация о пресете */}
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1">
-                    {editingPresetId === preset.id ? (
-                      <input
-                        type="text"
-                        defaultValue={preset.name}
-                        autoFocus
-                        onBlur={(e) => updatePresetName(preset.id, e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') updatePresetName(preset.id, e.target.value);
-                          if (e.key === 'Escape') setEditingPresetId(null);
-                        }}
-                        className="w-full bg-transparent border-b border-slate-300 dark:border-dark-500 focus:border-primary-500 outline-none"
-                      />
-                    ) : (
-                      <h3 className="font-medium truncate">{preset.name}</h3>
-                    )}
-                    <div className="flex items-center mt-2">
-                      <div 
-                        className="w-4 h-4 rounded-full mr-2 border border-slate-200 dark:border-dark-600"
-                        style={{
-                          backgroundColor: `hsl(${preset.primaryColor.hue}, ${preset.primaryColor.saturation}%, ${preset.primaryColor.lightness}%)`
-                        }}
-                      ></div>
-                      <span className="text-xs text-slate-500 dark:text-slate-400">
-                        {new Date(preset.createdAt).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {/* Кнопки действий - теперь только редактирование и удаление */}
-                  <div className="flex gap-1">
-                    <button
-                      className="p-2 text-slate-500 hover:text-primary-500 dark:text-slate-400 dark:hover:text-primary-400"
-                      onClick={(e) => {
-                        e.stopPropagation(); // Предотвращаем применение пресета
-                        setEditingPresetId(preset.id);
-                      }}
-                      title="Редактировать"
-                    >
-                      <i className="fas fa-pen"></i>
-                    </button>
-                    <button
-                      className="p-2 text-slate-500 hover:text-red-500 dark:text-slate-400 dark:hover:text-red-400"
-                      onClick={(e) => {
-                        e.stopPropagation(); // Предотвращаем применение пресета
-                        removeThemePreset(preset.id);
-                      }}
-                    >
-                      <i className="fas fa-trash"></i>
-                    </button>
-                  </div>
+              )}
+              {/* Индикатор текущего пресета */}
+              {(wallpaper.type === preset.wallpaper.type && 
+                wallpaper.value === preset.wallpaper.value && 
+                wallpaper.opacity === preset.wallpaper.opacity &&
+                primaryColor.hue === preset.primaryColor.hue &&
+                primaryColor.saturation === preset.primaryColor.saturation &&
+                primaryColor.lightness === preset.primaryColor.lightness) && (
+                <div className="absolute top-2 left-2 bg-primary-500 text-white text-xs px-2 py-1 rounded-md">
+                  Активно
+                </div>
+              )}
+            </div>
+            
+            {/* Информация о пресете */}
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1">
+                {editingPresetId === preset.id ? (
+                  <input
+                    type="text"
+                    defaultValue={preset.name}
+                    autoFocus
+                    onBlur={(e) => updatePresetName(preset.id, e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') updatePresetName(preset.id, e.target.value);
+                      if (e.key === 'Escape') setEditingPresetId(null);
+                    }}
+                    className="w-full bg-transparent border-b border-slate-300 dark:border-dark-500 focus:border-primary-500 outline-none"
+                  />
+                ) : (
+                  <h3 className="font-medium truncate">{preset.name}</h3>
+                )}
+                <div className="flex items-center mt-2">
+                  <div 
+                    className="w-4 h-4 rounded-full mr-2 border border-slate-200 dark:border-dark-600"
+                    style={{
+                      backgroundColor: `hsl(${preset.primaryColor.hue}, ${preset.primaryColor.saturation}%, ${preset.primaryColor.lightness}%)`
+                    }}
+                  ></div>
+                  <span className="text-xs text-slate-500 dark:text-slate-400">
+                    {new Date(preset.createdAt).toLocaleDateString()}
+                  </span>
                 </div>
               </div>
+              
+              {/* Кнопки действий */}
+              <div className="flex gap-1">
+                <button
+                  className="p-2 text-slate-500 hover:text-primary-500 dark:text-slate-400 dark:hover:text-primary-400"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditingPresetId(preset.id);
+                  }}
+                  title="Редактировать"
+                >
+                  <i className="fas fa-pen"></i>
+                </button>
+                <button
+                  className="p-2 text-slate-500 hover:text-red-500 dark:text-slate-400 dark:hover:text-red-400"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeThemePreset(preset.id);
+                  }}
+                >
+                  <i className="fas fa-trash"></i>
+                </button>
+              </div>
             </div>
-          ))}
+          </div>
         </div>
-      </div>
-    );
+      ))}
+    </div>
+  </div>
+);
 
             const renderWallpaperSettings = () => (
         <div className="settings-panel mb-6">
@@ -1635,6 +1776,60 @@ const renderThemePresets = () => (
                                 </label>
                             </div>
                         </div>
+
+<div className="settings-panel mb-6">
+    <h2 className="text-xl font-semibold mb-4 flex items-center gap-3">
+        <i className="fas fa-layer-group"></i> Расположение вкладок
+    </h2>
+    
+    <div className="space-y-4">
+        <div className="flex items-center justify-between py-3">
+            <div className="flex items-center gap-3">
+                <i className="fas fa-window-restore"></i>
+                <span>Вкладки вверху</span>
+            </div>
+            <label className="flex items-center cursor-pointer">
+                <input 
+                    type="radio" 
+                    className="hidden" 
+                    name="tabLayout"
+                    checked={tabLayout === 'tabs'}
+                    onChange={() => setTabLayout('tabs')}
+                />
+                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                    tabLayout === 'tabs' 
+                        ? 'border-primary-500 bg-primary-500' 
+                        : 'border-slate-300 dark:border-dark-600'
+                }`}>
+                    {tabLayout === 'tabs' && <div className="w-3 h-3 rounded-full bg-white"></div>}
+                </div>
+            </label>
+        </div>
+        
+        <div className="flex items-center justify-between py-3">
+            <div className="flex items-center gap-3">
+                <i className="fas fa-dock"></i>
+                <span>Док-бар внизу</span>
+            </div>
+            <label className="flex items-center cursor-pointer">
+                <input 
+                    type="radio" 
+                    className="hidden" 
+                    name="tabLayout"
+                    checked={tabLayout === 'dock'}
+                    onChange={() => setTabLayout('dock')}
+                />
+                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                    tabLayout === 'dock' 
+                        ? 'border-primary-500 bg-primary-500' 
+                        : 'border-slate-300 dark:border-dark-600'
+                }`}>
+                    {tabLayout === 'dock' && <div className="w-3 h-3 rounded-full bg-white"></div>}
+                </div>
+            </label>
+        </div>
+    </div>
+</div>
                         
                         {renderWallpaperSettings()}
                         {renderThemePresets()}
@@ -1948,7 +2143,7 @@ const renderThemePresets = () => (
                             </div>
                         </div>
 
-                        {siteGroups.length > 0 && (
+                        {siteGroups.length > 0 && tabLayout === 'tabs' && (
                             <div className="flex flex-col gap-1 mb-6 p-[6px] rounded-xl panel overflow-x-auto scrollbar-width-none">
                                 <div className="flex gap-1 overflow-x-auto scrollbar-width-none">
                                     {tabs.map(tab => (
@@ -2036,14 +2231,14 @@ const renderThemePresets = () => (
      
                                                     {group.sites.length === 0 && (
         <div 
-            className={`col-span-full flex flex-col items-center justify-center p-4 rounded-2xl cursor-pointer border-2 border-dashed ${
+            className={`col-span-full bg_blur_5 flex flex-col items-center justify-center p-4 rounded-2xl cursor-pointer ${
                 dragOverGroupId === group.id && dragOverSiteId === 'empty-group-drop' 
-                    ? 'border-primary-500 ring-2 ring-primary-500' 
-                    : 'border-slate-300 dark:border-dark-600'
+                    ? 'border-2 border-dashed border-primary-500' 
+                    : ''
             }`}
             onDragOver={(e) => handleSiteDragOver(e, group.id, 'empty-group-drop')}
             onDrop={(e) => handleSiteDrop(e, group.id, 'empty-group-drop')}
-            onClick={() => openAddSiteForm(group.id)} // Добавляем возможность добавить сайт по клику на область
+            onClick={() => openAddSiteForm(group.id)}
         >
             <div className="w-10 h-10 rounded-full bg-primary-500/10 flex items-center justify-center mb-2">
                 <i className="fas fa-plus text-primary-500"></i>
@@ -2071,8 +2266,8 @@ const renderThemePresets = () => (
                                 ))}
                             </div>
                         )}
-                        
-                        <footer className="mt-16 text-center text-slate-500 dark:text-slate-500 text-sm">
+
+                        <footer className="mt-16 text-center text-sm">
                             <p>Настроено с помощью SmartStart (kasiro Labs) • {new Date().getFullYear()}</p>
                         </footer>
                     </>
@@ -2085,6 +2280,8 @@ const renderThemePresets = () => (
                     {showGroupModal && renderGroupModal()}
                     {showSiteModal && renderSiteModal()}
                     {showIconManager && renderIconManager()}
+
+                    {!showSettings && tabLayout === 'dock' && siteGroups.length > 0 && <DockBar />}
                 </div>
             );
         }

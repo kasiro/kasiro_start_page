@@ -110,7 +110,6 @@
                 backdrop-filter: blur(5px);
             }
 
-            /* Ширина строки поиска */
             .search-container {
                 @apply w-full max-w-2xl mx-auto;
             }
@@ -225,10 +224,79 @@
                 z-index: 1;
             }
 
-            /* Модальные окна и настройки - поверх всего */
             .modal-overlay, .settings-panel {
-                z-index: 50; /* Достаточно высокий для модальных окон */
+                z-index: 50;
             }
+
+            .dock-bar {
+                @apply fixed bottom-0 left-0 right-0;
+                @apply flex justify-center items-center py-3 px-4 z-40;
+            }
+
+            .dock-container {
+                @apply flex w-full max-w-md h-full items-center justify-between gap-1 rounded-2xl px-3 py-2;
+                @apply bg-white/80 dark:bg-dark-700/80;
+                backdrop-filter: blur(10px);
+                @apply border-2 border-slate-200/50 dark:border-dark-600/50;
+            }
+
+            .dock-tab {
+                @apply flex items-center justify-center p-3 rounded-lg;
+                @apply transition-all duration-200 ease-out;
+                min-width: 44px;
+                height: 44px;
+                position: relative;
+            }
+
+            .dock-tab-active {
+                @apply text-primary-500;
+            }
+
+            .dock-tab-active::after {
+                content: '';
+                @apply absolute bottom-0 left-1/2 w-6 h-1 bg-primary-500 rounded-full;
+                transform: translateX(-50%);
+                animation: dockTabActive 0.3s ease-out;
+            }
+
+            .dock-tab-inactive {
+                @apply text-slate-600 dark:text-slate-300 hover:bg-slate-100/50 dark:hover:bg-dark-600/50;
+            }
+
+            .dock-tab-text {
+                @apply ml-2 font-medium;
+                animation: fadeIn 0.3s ease-out;
+            }
+
+            .dock-more-menu {
+                @apply absolute bottom-full mb-3 right-0;
+                @apply bg-white/90 dark:bg-dark-700/90 backdrop-blur-md rounded-xl shadow-xl;
+                @apply p-3 min-w-[160px] max-h-[300px] overflow-y-auto;
+                @apply border border-slate-200/50 dark:border-dark-600/50;
+                animation: slideUp 0.2s ease-out;
+            }
+
+            .dock-more-item {
+                @apply flex items-center gap-2 py-1 px-2 rounded-lg whitespace-nowrap;
+                @apply text-dark-600 dark:text-slate-200 hover:bg-slate-100/50 dark:hover:bg-dark-700/50;
+                transition: background-color 0.2s ease;
+            }
+
+            @keyframes dockTabActive {
+                from { width: 0; opacity: 0; }
+                to { width: 24px; opacity: 1; }
+            }
+
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateX(-5px); }
+                to { opacity: 1; transform: translateX(0); }
+            }
+
+            @keyframes slideUp {
+                from { opacity: 0; transform: translateY(5px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+
         }
     </style>
 </head>
@@ -275,6 +343,15 @@
                 { name: 'Яндекс', url: 'https://yandex.ru/search/?text=%s' }
             ];
         });
+
+        const [tabLayout, setTabLayout] = useState(() => {
+    const saved = localStorage.getItem('tabLayout');
+    return saved ? JSON.parse(saved) : 'tabs'; // 'tabs' или 'dock'
+});
+
+useEffect(() => {
+    localStorage.setItem('tabLayout', JSON.stringify(tabLayout));
+}, [tabLayout]);
 
 const [themePresets, setThemePresets] = useState(() => {
     const saved = localStorage.getItem('themePresets');
@@ -1115,6 +1192,100 @@ const SearchInput = ({ onSearch, placeholder }) => {
   );
 };
 
+const DockBar = () => {
+    const [showMoreMenu, setShowMoreMenu] = useState(false);
+    const moreMenuRef = useRef(null);
+    
+    const maxVisibleTabs = 4;
+    const visibleTabs = tabs.length <= maxVisibleTabs ? tabs : tabs.slice(0, maxVisibleTabs - 1);
+    const hiddenTabs = tabs.length <= maxVisibleTabs ? [] : tabs.slice(maxVisibleTabs - 1);
+    
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (moreMenuRef.current && !moreMenuRef.current.contains(event.target)) {
+                setShowMoreMenu(false);
+            }
+        };
+        
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const activeHiddenTabs = hiddenTabs.find(tab => tab.id === activeTab);
+    
+    return (
+        <div className="dock-bar">
+            <div className="dock-container">
+                {visibleTabs.map(tab => (
+                    <button
+                        key={tab.id}
+                        className={`dock-tab ${
+                            activeTab === tab.id ? 'dock-tab-active' : 'dock-tab-inactive'
+                        }`}
+                        onClick={() => {
+                            setActiveTab(tab.id);
+                            scrollTabIntoView(tab.id);
+                        }}
+                        title={tab.name}
+                    >
+                        {getIcon(tab.icon)}
+                        {activeTab === tab.id && (
+                            <span className="dock-tab-text">{tab.name}</span>
+                        )}
+                    </button>
+                ))}
+                
+                {hiddenTabs.length > 0 && (
+                    <div className="relative" ref={moreMenuRef}>
+                        <button
+                            className={`dock-tab ${
+                                hiddenTabs.some(tab => tab.id === activeTab) 
+                                    ? 'dock-tab-active' 
+                                    : 'dock-tab-inactive'
+                            }`}
+                            onClick={() => setShowMoreMenu(!showMoreMenu)}
+                            title="Дополнительные вкладки"
+                        >
+                            {hiddenTabs.some(tab => tab.id === activeTab) ? (
+                                <>
+                                    {getIcon(activeHiddenTabs?.icon)}
+                                    <span className="dock-tab-text">
+                                        {activeHiddenTabs?.name}
+                                    </span>
+                                </>
+                            ) : (
+                                <i className="fas fa-bars"></i>
+                            )}
+                        </button>
+                        
+                        {showMoreMenu && (
+                            <div className="dock-more-menu">
+                                {hiddenTabs.map(tab => (
+                                    <button
+                                        key={tab.id}
+                                        className="dock-more-item"
+                                        onClick={() => {
+                                            setActiveTab(tab.id);
+                                            scrollTabIntoView(tab.id);
+                                            setShowMoreMenu(false);
+                                        }}
+                                    >
+                                        {getIcon(tab.icon)}
+                                        <span>{tab.name}</span>
+                                        {activeTab === tab.id && (
+                                            <i className="fas fa-check ml-auto text-primary-500"></i>
+                                        )}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
             // Рендеринг модального окна группы
             const renderGroupModal = () => {
                 return (
@@ -1611,7 +1782,96 @@ const renderThemePresets = () => (
                                 </label>
                             </div>
                         </div>
-                        
+
+                        <div className="settings-panel mb-6">
+    <h2 className="text-xl font-semibold mb-4 flex items-center gap-3">
+        <i className="fas fa-layer-group"></i> Расположение вкладок
+    </h2>
+    
+    {/* Сегментированный переключатель */}
+    <div className="relative bg-slate-100 dark:bg-dark-800 p-1 rounded-xl inline-flex">
+        {/* Активный индикатор */}
+        <div 
+            className={`absolute top-1 bottom-1 rounded-lg bg-white dark:bg-dark-900 shadow-sm transition-all duration-300 ${
+                tabLayout === 'tabs' ? 'left-1 w-[calc(50%-8px)]' : 'left-[calc(50%+4px)] w-[calc(50%-12px)]'
+            }`}
+        />
+        
+        {/* Варианты */}
+        <button
+            className={`relative z-10 px-6 py-2 rounded-lg text-sm font-medium transition-colors ${
+                tabLayout === 'tabs' 
+                    ? 'text-primary-500' 
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+            }`}
+            onClick={() => setTabLayout('tabs')}
+        >
+            <div className="flex items-center gap-2">
+                <i className="fas fa-align-left"></i>
+                <span>Вкладки</span>
+            </div>
+        </button>
+        
+        <button
+            className={`relative z-10 px-6 py-2 rounded-lg text-sm font-medium transition-colors ${
+                tabLayout === 'dock' 
+                    ? 'text-primary-500' 
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+            }`}
+            onClick={() => setTabLayout('dock')}
+        >
+            <div className="flex items-center gap-2">
+                <i className="fas fa-window-maximize"></i>
+                <span>Док-бар</span>
+            </div>
+        </button>
+    </div>
+    
+    {/* Динамическое превью */}
+    <div className="mt-6 border border-slate-200 dark:border-dark-700 rounded-xl overflow-hidden">
+        {/* Заголовок превью */}
+        <div className="bg-slate-50 dark:bg-dark-800 px-4 py-2 border-b border-slate-200 dark:border-dark-700">
+            <h3 className="font-medium text-sm">Предпросмотр</h3>
+        </div>
+        
+        {/* Контент превью */}
+        <div className="relative items-center h-40 bg-white dark:bg-dark-900">
+            {/* Вкладки (если выбрано) */}
+            {tabLayout === 'tabs' && (
+                <div className="absolute top-0 left-0 right-0 h-10 flex px-3 pt-2 gap-1 bg-slate-50 dark:bg-dark-800">
+                    <div className="h-8 rounded-lg bg-primary-500 w-1/4 flex items-center justify-center">
+                        <span className="text-xs text-white">Активная</span>
+                    </div>
+                    <div className="h-8 rounded-lg bg-slate-200 dark:bg-dark-700 w-1/4"></div>
+                    <div className="h-8 rounded-lg bg-slate-200 dark:bg-dark-700 w-1/4"></div>
+                    <div className="h-8 rounded-lg bg-slate-200 dark:bg-dark-700 w-1/4"></div>
+                </div>
+            )}
+            
+            {/* Основной контент */}
+            <div className={`absolute ${
+                tabLayout === 'tabs' ? 'top-10' : 'top-0'
+            } bottom-0 left-0 right-0 flex items-center justify-center bg-slate-50 dark:bg-dark-800`}>
+                <div className="text-slate-400 dark:text-slate-600 text-sm">
+                    Контент
+                </div>
+            </div>
+            
+            {/* Док-бар (если выбрано) */}
+            {tabLayout === 'dock' && (
+                <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 w-4/5 h-12 bg-white dark:bg-dark-800 rounded-xl shadow-lg flex items-center justify-around px-4">
+                    <div className="w-8 h-8 rounded-md bg-primary-500 flex items-center justify-center">
+                        <i className="fas fa-home text-white text-xs"></i>
+                    </div>
+                    <div className="w-8 h-8 rounded-md bg-slate-200 dark:bg-dark-700"></div>
+                    <div className="w-8 h-8 rounded-md bg-slate-200 dark:bg-dark-700"></div>
+                    <div className="w-8 h-8 rounded-md bg-slate-200 dark:bg-dark-700"></div>
+                </div>
+            )}
+        </div>
+    </div>
+</div>
+
                         {renderWallpaperSettings()}
                         {renderThemePresets()}
                         
@@ -1924,7 +2184,7 @@ const renderThemePresets = () => (
                             </div>
                         </div>
 
-                        {siteGroups.length > 0 && (
+                        {siteGroups.length > 0 && tabLayout === 'tabs' && (
                             <div className="flex flex-col gap-1 mb-6 p-[6px] rounded-xl panel overflow-x-auto scrollbar-width-none">
                                 <div className="flex gap-1 overflow-x-auto scrollbar-width-none">
                                     {tabs.map(tab => (
@@ -2012,14 +2272,14 @@ const renderThemePresets = () => (
      
                                                     {group.sites.length === 0 && (
         <div 
-            className={`col-span-full flex flex-col items-center justify-center p-4 rounded-2xl cursor-pointer border-2 border-dashed ${
+            className={`col-span-full bg_blur_5 flex flex-col items-center justify-center p-4 rounded-2xl cursor-pointer ${
                 dragOverGroupId === group.id && dragOverSiteId === 'empty-group-drop' 
-                    ? 'border-primary-500 ring-2 ring-primary-500' 
-                    : 'border-slate-300 dark:border-dark-600'
+                    ? 'border-2 border-dashed border-primary-500' 
+                    : ''
             }`}
             onDragOver={(e) => handleSiteDragOver(e, group.id, 'empty-group-drop')}
             onDrop={(e) => handleSiteDrop(e, group.id, 'empty-group-drop')}
-            onClick={() => openAddSiteForm(group.id)} // Добавляем возможность добавить сайт по клику на область
+            onClick={() => openAddSiteForm(group.id)}
         >
             <div className="w-10 h-10 rounded-full bg-primary-500/10 flex items-center justify-center mb-2">
                 <i className="fas fa-plus text-primary-500"></i>
@@ -2061,6 +2321,8 @@ const renderThemePresets = () => (
                     {showGroupModal && renderGroupModal()}
                     {showSiteModal && renderSiteModal()}
                     {showIconManager && renderIconManager()}
+
+                    {!showSettings && tabLayout === 'dock' && siteGroups.length > 0 && <DockBar />}
                 </div>
             );
         }
