@@ -47,8 +47,6 @@
     --accent-hue: 250;
     --accent-saturation: 99%;
     --accent-lightness: 79%;
-
-    --keyboard-offset: 0;
 }
 
         @layer base {
@@ -224,8 +222,6 @@
                 width: 100%;
                 height: 100%;
                 z-index: 1;
-                padding-bottom: calc(20px + var(--keyboard-offset));
-                transition: padding-bottom 0.3s ease;
             }
 
             .modal-overlay, .settings-panel {
@@ -1075,9 +1071,6 @@ const SearchInput = ({ onSearch, placeholder }) => {
       if (dockBar) {
         dockBar.classList.add('dock-bar-hidden');
       }
-      
-      // Добавляем отступ для мобильных устройств
-      document.documentElement.style.setProperty('--keyboard-offset', '300px');
     };
 
     const handleBlur = () => {
@@ -1085,9 +1078,6 @@ const SearchInput = ({ onSearch, placeholder }) => {
       if (dockBar) {
         dockBar.classList.remove('dock-bar-hidden');
       }
-      
-      // Убираем отступ
-      document.documentElement.style.setProperty('--keyboard-offset', '0');
     };
 
     const input = inputRef.current;
