@@ -303,7 +303,17 @@
                 from { opacity: 0; transform: translateY(5px); }
                 to { opacity: 1; transform: translateY(0); }
             }
+            .import-export-btn {
+                @apply flex items-center gap-2 p-3 px-4 rounded-xl transition-colors;
+            }
 
+            .import-export-btn-primary {
+                @apply bg-primary-500 text-white hover:bg-primary-600;
+            }
+
+            .import-export-btn-secondary {
+                @apply bg-slate-200 dark:bg-dark-800 hover:bg-slate-300 dark:hover:bg-dark-700;
+            }
         }
     </style>
 </head>
@@ -351,6 +361,8 @@
             ];
         });
 
+        const [importExportStatus, setImportExportStatus] = useState(null);
+
         const [tabLayout, setTabLayout] = useState(() => {
     const saved = localStorage.getItem('tabLayout');
     return saved ? JSON.parse(saved) : 'tabs'; // 'tabs' или 'dock'
@@ -381,6 +393,76 @@ const addThemePreset = () => {
   
   setThemePresets([...themePresets, newPreset]);
   setNewPresetName('');
+};
+
+// Функция для экспорта всех настроек
+const exportSettings = () => {
+    const settings = {
+        version: 1,
+        darkMode,
+        siteGroups,
+        customIcons,
+        primaryColor,
+        wallpaper,
+        wallpapers,
+        customWallpapers,
+        searchEngines,
+        currentSearchEngine,
+        hiddenCategories,
+        themePresets,
+        tabLayout
+    };
+
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(settings, null, 2));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", "smartstart-settings.json");
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+
+    setImportExportStatus('Настройки успешно экспортированы');
+    setTimeout(() => setImportExportStatus(null), 3000);
+};
+
+// Функция для импорта настроек
+const importSettings = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const importedSettings = JSON.parse(e.target.result);
+            
+            // Валидация импортированных данных
+            if (!importedSettings.version || importedSettings.version !== 1) {
+                throw new Error('Неподдерживаемая версия файла настроек');
+            }
+
+            // Применяем настройки
+            if (importedSettings.darkMode !== undefined) setDarkMode(importedSettings.darkMode);
+            if (importedSettings.siteGroups) setSiteGroups(importedSettings.siteGroups);
+            if (importedSettings.customIcons) setCustomIcons(importedSettings.customIcons);
+            if (importedSettings.primaryColor) setPrimaryColor(importedSettings.primaryColor);
+            if (importedSettings.wallpaper) setWallpaper(importedSettings.wallpaper);
+            if (importedSettings.wallpapers) setWallpapers(importedSettings.wallpapers);
+            if (importedSettings.customWallpapers) setCustomWallpapers(importedSettings.customWallpapers);
+            if (importedSettings.searchEngines) setSearchEngines(importedSettings.searchEngines);
+            if (importedSettings.currentSearchEngine) setCurrentSearchEngine(importedSettings.currentSearchEngine);
+            if (importedSettings.hiddenCategories) setHiddenCategories(importedSettings.hiddenCategories);
+            if (importedSettings.themePresets) setThemePresets(importedSettings.themePresets);
+            if (importedSettings.tabLayout) setTabLayout(importedSettings.tabLayout);
+
+            setImportExportStatus('Настройки успешно импортированы');
+        } catch (error) {
+            console.error('Ошибка импорта настроек:', error);
+            setImportExportStatus(`Ошибка: ${error.message}`);
+        }
+        setTimeout(() => setImportExportStatus(null), 3000);
+    };
+    reader.readAsText(file);
+    event.target.value = ''; // Сбрасываем значение input для возможности повторного выбора того же файла
 };
 
 const updatePresetName = (id, newName) => {
@@ -884,7 +966,7 @@ useEffect(() => {
             useEffect(() => {
                 const now = new Date();
                 const updateTime = () => {
-                    setCurrentTime(now.toLocaleTimeString('ru-RU', { 
+                    setCurrentTime(new Date().toLocaleTimeString('ru-RU', { 
                         hour: '2-digit', 
                         minute: '2-digit'
                     }));
@@ -1842,6 +1924,48 @@ const renderThemePresets = () => (
                                 </label>
                             </div>
                         </div>
+
+<div className="settings-panel">
+    <h2 className="text-xl font-semibold mb-4 flex items-center gap-3">
+        <i className="fas fa-file-import"></i> Импорт / Экспорт
+    </h2>
+    
+    <div className="flex flex-col gap-3">
+        <button 
+            className="flex items-center gap-2 bg-primary-500 text-white p-3 px-4 rounded-xl hover:bg-primary-600"
+            onClick={exportSettings}
+        >
+            <i className="fas fa-file-export"></i>
+            <span>Экспорт всех настроек</span>
+        </button>
+        
+        <label className="flex items-center gap-2 bg-slate-200 dark:bg-dark-800 p-3 px-4 rounded-xl hover:bg-slate-300 dark:hover:bg-dark-700 cursor-pointer">
+            <i className="fas fa-file-import"></i>
+            <span>Импорт настроек</span>
+            <input 
+                type="file" 
+                accept=".json" 
+                onChange={importSettings}
+                className="hidden"
+            />
+        </label>
+        
+        {importExportStatus && (
+            <div className={`p-3 rounded-xl ${
+                importExportStatus.startsWith('Ошибка') 
+                    ? 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200' 
+                    : 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
+            }`}>
+                {importExportStatus}
+            </div>
+        )}
+        
+        <div className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+            <p><strong>Внимание:</strong> Импорт настроек полностью заменит текущие настройки.</p>
+            <p>Рекомендуется экспортировать текущие настройки перед импортом.</p>
+        </div>
+    </div>
+</div>
 
                         <div className="settings-panel mb-6">
     <h2 className="text-xl font-semibold mb-4 flex items-center gap-3">
