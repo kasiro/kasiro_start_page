@@ -363,6 +363,15 @@
 
         const [importExportStatus, setImportExportStatus] = useState(null);
 
+        const [searchHistory, setSearchHistory] = useState(() => {
+    const saved = localStorage.getItem('searchHistory');
+    return saved ? JSON.parse(saved) : [];
+});
+
+useEffect(() => {
+    localStorage.setItem('searchHistory', JSON.stringify(searchHistory));
+}, [searchHistory]);
+
         const [tabLayout, setTabLayout] = useState(() => {
     const saved = localStorage.getItem('tabLayout');
     return saved ? JSON.parse(saved) : 'tabs'; // 'tabs' или 'dock'
@@ -416,7 +425,7 @@ const exportSettings = () => {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(settings, null, 2));
     const downloadAnchorNode = document.createElement('a');
     downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", "smartstart-settings.json");
+    downloadAnchorNode.setAttribute("download", "SmartStart-Settings.json");
     document.body.appendChild(downloadAnchorNode);
     downloadAnchorNode.click();
     downloadAnchorNode.remove();
@@ -1140,9 +1149,16 @@ useEffect(() => {
                 localStorage.setItem('customWallpapers', JSON.stringify(customWallpapers));
             }, [customWallpapers]);
  
-const SearchInput = ({ onSearch, placeholder }) => {
+const SearchInput = ({
+    onSearch,
+    placeholder,
+    searchHistory,
+    setSearchHistory,
+    onAddToHistory,
+    onRemoveFromHistory,
+    onClearHistory
+}) => {
   const [inputValue, setInputValue] = useState('');
-  const [history, setHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
   const [focused, setFocused] = useState(false);
   const inputRef = useRef(null);
@@ -1174,42 +1190,13 @@ const SearchInput = ({ onSearch, placeholder }) => {
     }
   }, []);
 
-  // Загрузка истории при монтировании
-  useEffect(() => {
-    const saved = localStorage.getItem('searchHistory');
-    if (saved) setHistory(JSON.parse(saved));
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem('searchHistory', JSON.stringify(history));
-  }, [history]);
-
-
-  const removeFromHistory = (query) => {
-    setHistory([
-        ...history.filter(item => item.toLowerCase() !== query.trim().toLowerCase())
-    ]);
-  }
-
-  // Сохранение в историю
-  const saveToHistory = (query) => {
-    if (!query.trim()) return;
-    
-    const updatedHistory = [
-      query.trim(),
-      ...history.filter(item => item.toLowerCase() !== query.trim().toLowerCase())
-    ].slice(0, 5);
-    
-    setHistory(updatedHistory);
-  };
-
   // Основной обработчик клавиш
   const handleKeyDown = (e) => {
     const { value } = e.target;
     
     // Обработка Enter
     if (e.key === 'Enter') {
-      saveToHistory(inputValue);
+      onAddToHistory(inputValue);
       onSearch(inputValue);
       setShowHistory(false);
       setInputValue('');
@@ -1259,7 +1246,7 @@ const SearchInput = ({ onSearch, placeholder }) => {
         />
         <button
           onClick={() => {
-            saveToHistory(inputValue);
+            onAddToHistory(inputValue);
             onSearch(inputValue);
             setShowHistory(false);
             setInputValue('');
@@ -1270,17 +1257,17 @@ const SearchInput = ({ onSearch, placeholder }) => {
         </button>
       </div>
 
-      {showHistory && history.length > 0 && (
+      {showHistory && searchHistory.length > 0 && (
         <div className="absolute z-10 w-full mt-1 bg_blur_5 rounded-lg shadow-lg border border-gray-200 dark:border-dark-600">
           <div className="py-1">
             <div
                 className="px-4 py-1 cursor-pointer flex items-center justify-end"
                 onMouseDown={(e) => e.preventDefault()}
-                onClick={() => setHistory([])}
+                onClick={() => setSearchHistory([])}
               >
                 <span className="truncate">Отчистить</span>
               </div>
-            {history.map((item, i) => (
+            {searchHistory.map((item, i) => (
               <div
                 key={i}
                 className="px-4 py-2 cursor-pointer flex items-center justify-between"
@@ -1294,7 +1281,7 @@ const SearchInput = ({ onSearch, placeholder }) => {
                 <button 
                     onClick={(e) => {
                         e.stopPropagation();
-                        removeFromHistory(item)
+                        onRemoveFromHistory(item)
                     }}
                 >
                     <i className="fas fa-times mr-2" />
@@ -1620,7 +1607,7 @@ const DockBar = () => {
                 
                 <div className="icon-manager-footer">
                     <div className="flex justify-end pt-4">
-<button
+                        <button
                             className="px-4 py-2 rounded-xl bg-primary-500 text-white hover:bg-primary-600"
                             onClick={() => setShowIconManager(false)}
                         >
@@ -1893,7 +1880,7 @@ const renderThemePresets = () => (
             const renderSettings = () => {
                 return (
                     <div className="max-w-3xl mx-auto">
-                        <div className="modal-overlay panel flex items-center justify-between mb-8 py-2 px-3">
+                        <div className="modal-overlay panel flex items-center justify-between rounded-b-none py-2 px-3">
                             <h1 className="text-3xl font-bold">Настройки</h1>
                             <button 
                                 className="p-3"
@@ -1903,7 +1890,7 @@ const renderThemePresets = () => (
                             </button>
                         </div>
                         
-                        <div className="settings-panel mb-6">
+                        <div className="settings-panel rounded-t-none mb-6">
                             <h2 className="text-xl font-semibold mb-4 flex items-center gap-3">
                                 <i className="fas fa-paint-brush"></i> Внешний вид
                             </h2>
@@ -1925,7 +1912,7 @@ const renderThemePresets = () => (
                             </div>
                         </div>
 
-<div className="settings-panel">
+<div className="settings-panel mb-6">
     <h2 className="text-xl font-semibold mb-4 flex items-center gap-3">
         <i className="fas fa-file-import"></i> Импорт / Экспорт
     </h2>
@@ -2363,6 +2350,22 @@ const renderThemePresets = () => (
                                     setSearchQuery(query);
                                     handleSearch(query);
                                   }}
+                                  searchHistory={searchHistory}
+                                  onAddToHistory={(query) => {
+                                    if (!query.trim()) return;
+                                    const updatedHistory = [
+                                        query.trim(),
+                                        ...searchHistory.filter(item => item.toLowerCase() !== query.trim().toLowerCase())
+                                    ].slice(0, 5);
+                                    setSearchHistory(updatedHistory);
+                                }}
+                                onRemoveFromHistory={(query) => {
+                                    setSearchHistory([
+                                        ...searchHistory.filter(item => item.toLowerCase() !== query.trim().toLowerCase())
+                                    ]);
+                                }}
+                                setSearchHistory={setSearchHistory}
+                                onClearHistory={() => setSearchHistory([])}
                                   placeholder={`Поиск в ${currentSearchEngine.name}`}
                                 />
                             </div>
