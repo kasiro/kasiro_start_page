@@ -620,6 +620,21 @@ const updateWallpaperOpacity = (opacity) => {
         setCustomWallpapers([...customWallpapers, newWallpaper]);
     };
 
+    const [colorPresets, setColorPresets] = useState(() => {
+        const saved = localStorage.getItem('colorPresets');
+        return saved ? JSON.parse(saved) : [
+            { id: '1', name: 'Синий', hue: 220, saturation: 83, lightness: 61 },
+            { id: '2', name: 'Фиолетовый', hue: 272, saturation: 91, lightness: 65 },
+            { id: '3', name: 'Красный', hue: 0, saturation: 84, lightness: 60 },
+            { id: '4', name: 'Зеленый', hue: 142, saturation: 71, lightness: 54 }
+        ];
+    });
+
+    // Не забудьте добавить сохранение в localStorage
+    useEffect(() => {
+        localStorage.setItem('colorPresets', JSON.stringify(colorPresets));
+    }, [colorPresets]);
+
     const removeWallpaper = (index) => {
         const newWallpapers = [...wallpapers];
         newWallpapers.splice(index, 1);
@@ -1607,7 +1622,7 @@ const DockBar = () => {
                 
                 <div className="icon-manager-footer">
                     <div className="flex justify-end pt-4">
-<button
+                        <button
                             className="px-4 py-2 rounded-xl bg-primary-500 text-white hover:bg-primary-600"
                             onClick={() => setShowIconManager(false)}
                         >
@@ -1880,17 +1895,17 @@ const renderThemePresets = () => (
             const renderSettings = () => {
                 return (
                     <div className="max-w-3xl mx-auto">
-                        <div className="modal-overlay panel flex items-center justify-between rounded-b-none py-2 px-3">
-                            <h1 className="text-3xl font-bold">Настройки</h1>
-                            <button 
-                                className="p-3"
-                                onClick={() => setShowSettings(false)}
-                            >
-                                <i className="fas fa-times text-3xl"></i>
-                            </button>
-                        </div>
-                        
-                        <div className="settings-panel rounded-t-none mb-6">
+                        <div className="settings-panel mb-6">
+                            <div className="modal-overlay mt-[-15px] mb-5 flex items-center justify-between">
+                                <h1 className="text-3xl font-bold">Настройки</h1>
+                                <button 
+                                    className="p-3 mr-[-15px]"
+                                    onClick={() => setShowSettings(false)}
+                                >
+                                    <i className="fas fa-times text-3xl"></i>
+                                </button>
+                            </div>
+
                             <h2 className="text-xl font-semibold mb-4 flex items-center gap-3">
                                 <i className="fas fa-paint-brush"></i> Внешний вид
                             </h2>
@@ -2045,7 +2060,7 @@ const renderThemePresets = () => (
 
                         {renderWallpaperSettings()}
                         {renderThemePresets()}
-                        
+
 <div className="settings-panel mb-6">
     <h2 className="text-xl font-semibold mb-4 flex items-center gap-3">
         <i className="fas fa-palette"></i> Цветовая схема
@@ -2117,24 +2132,61 @@ const renderThemePresets = () => (
         </button>
     </div>
 
-    
-    <div className="mt-4 grid grid-cols-4 gap-2">
-        <button 
-            className="h-10 rounded-lg bg-blue-500 hover:bg-blue-600"
-            onClick={() => updatePrimaryColor(220, 83, 61)} // Синий
-        ></button>
-        <button 
-            className="h-10 rounded-lg bg-purple-500 hover:bg-purple-600"
-            onClick={() => updatePrimaryColor(272, 91, 65)} // Фиолетовый
-        ></button>
-        <button 
-            className="h-10 rounded-lg bg-red-500 hover:bg-red-600"
-            onClick={() => updatePrimaryColor(0, 84, 60)} // Красный
-        ></button>
-        <button 
-            className="h-10 rounded-lg bg-green-500 hover:bg-green-600"
-            onClick={() => updatePrimaryColor(142, 71, 54)} // Зеленый
-        ></button>
+    {/* Секция цветовых пресетов */}
+    <div className="mt-6">
+        <div className="flex items-center justify-between mb-3">
+            <h3 className="font-medium">Цветовые пресеты</h3>
+            <button
+                className="flex items-center outline-none gap-2 text-sm bg-primary-500 text-white px-3 py-1 rounded-lg"
+                onClick={() => {
+                    const newColorPreset = {
+                        id: generateId(),
+                        name: `Цвет ${colorPresets.length + 1}`,
+                        hue: primaryColor.hue,
+                        saturation: primaryColor.saturation,
+                        lightness: primaryColor.lightness,
+                        createdAt: new Date().toISOString()
+                    };
+                    setColorPresets([...colorPresets, newColorPreset]);
+                }}
+            >
+                <i className="fas fa-plus"></i>
+                <span>Добавить текущий</span>
+            </button>
+        </div>
+        
+        <div className="grid grid-cols-4 gap-3">
+            {colorPresets.map(preset => (
+                <div key={preset.id} className="relative group">
+                    <button
+                        className="w-full h-10 rounded-lg transition-transform hover:scale-105"
+                        style={{
+                            backgroundColor: `hsl(${preset.hue}, ${preset.saturation}%, ${preset.lightness}%)`
+                        }}
+                        onClick={() => updatePrimaryColor(
+                            preset.hue,
+                            preset.saturation,
+                            preset.lightness
+                        )}
+                        title={preset.name}
+                    >
+                        {/* Удаляем интерактивность из основного элемента */}
+                    </button>
+                    
+                    {/* Кнопка удаления - теперь отдельно и видна только при наведении */}
+                    <button
+                        className="absolute -top-2 -right-2 text-white bg-red-500 rounded-full w-5 h-5 flex items-center justify-center"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setColorPresets(colorPresets.filter(p => p.id !== preset.id));
+                        }}
+                        title="Удалить пресет"
+                    >
+                        <i className="fas fa-times text-xs"></i>
+                    </button>
+                </div>
+            ))}
+        </div>
     </div>
 </div>
 
