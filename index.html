@@ -36,18 +36,20 @@
 </script>
     <style type="text/tailwindcss">
         :root {
-    --primary-hue: 250;
-    --primary-saturation: 79%;
-    --primary-lightness: 59%;
-    
-    --secondary-hue: 280;
-    --secondary-saturation: 79%;
-    --secondary-lightness: 59%;
-    
-    --accent-hue: 250;
-    --accent-saturation: 99%;
-    --accent-lightness: 79%;
-}
+            --primary-hue: 250;
+            --primary-saturation: 79%;
+            --primary-lightness: 59%;
+            
+            --secondary-hue: 280;
+            --secondary-saturation: 79%;
+            --secondary-lightness: 59%;
+            
+            --accent-hue: 250;
+            --accent-saturation: 99%;
+            --accent-lightness: 79%;
+
+            --panel-blur: 5px;
+        }
 
         @layer base {
             html, body {
@@ -107,7 +109,7 @@
 
             .panel, .settings-panel, .bg_blur_5 {
                 @apply bg-white/80 dark:bg-dark-700/80;
-                backdrop-filter: blur(5px);
+                backdrop-filter: blur(var(--panel-blur));
             }
 
             .search-container {
@@ -367,6 +369,16 @@
     const saved = localStorage.getItem('searchHistory');
     return saved ? JSON.parse(saved) : [];
 });
+
+const [panelBlur, setPanelBlur] = useState(() => {
+    const saved = localStorage.getItem('panelBlur');
+    return saved ? parseInt(saved) : 5; // Значение по умолчанию 5px
+});
+
+useEffect(() => {
+    localStorage.setItem('panelBlur', panelBlur.toString());
+    document.documentElement.style.setProperty('--panel-blur', `${panelBlur}px`);
+}, [panelBlur]);
 
 useEffect(() => {
     localStorage.setItem('searchHistory', JSON.stringify(searchHistory));
@@ -1826,6 +1838,22 @@ const renderThemePresets = () => (
                 />
                 <div className="text-sm text-slate-500 dark:text-slate-400 mt-1">
                     Текущая прозрачность: {Math.round(wallpaper.opacity * 100)}%
+                </div>
+            </div>
+
+            <div className="mb-4">
+                <label className="block mb-2">Сила размытия панелей</label>
+                <input
+                    type="range"
+                    min="0"
+                    max="20"
+                    step="1"
+                    value={panelBlur}
+                    onChange={(e) => setPanelBlur(parseInt(e.target.value))}
+                    className="w-full"
+                />
+                <div className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                    Текущее размытие: {panelBlur}px
                 </div>
             </div>
             
