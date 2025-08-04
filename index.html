@@ -1846,7 +1846,7 @@ const renderThemePresets = () => (
                 <input
                     type="range"
                     min="0"
-                    max="20"
+                    max="10"
                     step="1"
                     value={panelBlur}
                     onChange={(e) => setPanelBlur(parseInt(e.target.value))}
@@ -1930,6 +1930,15 @@ const renderThemePresets = () => (
                                     <i className="fas fa-image text-2xl"></i>
                                 </div>
                             )}
+
+                            {/* Добавляем иконку типа изображения */}
+                            <div className="absolute bottom-1 right-1 bg-black bg-opacity-50 rounded-md justify-center items-center px-[6px]">
+                                {wp.isBase64 ? (
+                                    <i className="fas fa-upload text-white text-xs"></i>
+                                ) : (
+                                    <i className="fas fa-link text-white text-xs"></i>
+                                )}
+                            </div>
                         </button>
                         <button
                             className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
