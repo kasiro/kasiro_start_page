@@ -49,7 +49,6 @@
             --accent-lightness: 79%;
 
             --panel-blur: 10px;
-            --blur-mini: 5px;
         }
 
         @layer base {
@@ -115,15 +114,6 @@
                 transform: translateZ(0); /* Аппаратное ускорение */
                 will-change: transform;
                 contain: paint;
-                transition: backdrop-filter 0.2s ease-out;
-            }
-
-            body.scrolling .panel,
-            body.scrolling .bg_blur_5,
-            body.scrolling .settings-panel {
-                backdrop-filter: blur(var(--blur-mini)) !important;
-                -webkit-backdrop-filter: blur(var(--blur-mini)) !important;
-                transition: backdrop-filter 0.1s ease !important;
             }
 
             .search-container {
@@ -265,9 +255,8 @@
                 @apply bg-white/80 dark:bg-dark-700/80;
                 backdrop-filter: blur(var(--panel-blur));
                 @apply border-2 border-slate-200/50 dark:border-dark-600/50;
-            }
-            body.scrolling .dock-container {
-                backdrop-filter: blur(var(--blur-mini)) !important;
+                transform: translateZ(0); /* Аппаратное ускорение */
+                will-change: transform;
             }
 
             .dock-tab {
@@ -331,11 +320,11 @@
             }
 
             .import-export-btn-primary {
-                @apply bg-primary-500 text-white hover:bg-primary-600;
+                @apply bg-primary-500 text-white;
             }
 
             .import-export-btn-secondary {
-                @apply bg-slate-200 dark:bg-dark-800 hover:bg-slate-300 dark:hover:bg-dark-700;
+                @apply bg-slate-200 dark:bg-dark-800;
             }
         }
     </style>
@@ -391,49 +380,11 @@
     return saved ? JSON.parse(saved) : [];
 });
 
+const [panelBlurMax, setPanelBlurMax] = useState(10);
 const [panelBlur, setPanelBlur] = useState(() => {
     const saved = localStorage.getItem('panelBlur');
-    return saved ? parseInt(saved) : 10; // Значение по умолчанию
+    return saved ? parseInt(saved) : panelBlurMax; // Значение по умолчанию
 });
-const [isScrolling, setIsScrolling] = useState(false);
-const scrollTimeout = useRef(null);
-
-useEffect(() => {
-  console.log('scroll setup');
-  let scrollTimeoutId = null;
-  const rootElement = document.getElementById('root');
-
-  const handleScroll = () => {
-    console.log('Scroll detected!');
-    
-    // Если таймаут уже был, очищаем его
-    if (scrollTimeoutId) {
-      clearTimeout(scrollTimeoutId);
-    }
-    
-    // Если скролл только начался
-    if (!isScrolling) {
-      setIsScrolling(true);
-      document.body.classList.add('scrolling');
-    }
-    
-    // Устанавливаем таймаут для окончания скролла
-    scrollTimeoutId = setTimeout(() => {
-      setIsScrolling(false);
-      document.body.classList.remove('scrolling');
-      scrollTimeoutId = null;
-    }, 200);
-  };
-
-  if (rootElement) {
-    rootElement.addEventListener('scroll', handleScroll, { passive: true });
-    
-    return () => {
-      rootElement.removeEventListener('scroll', handleScroll);
-      if (scrollTimeoutId) clearTimeout(scrollTimeoutId);
-    };
-  }
-}, [isScrolling]);
 
 useEffect(() => {
     localStorage.setItem('panelBlur', panelBlur.toString());
@@ -798,8 +749,6 @@ useEffect(() => {
             localStorage.setItem('currentSearchEngine', JSON.stringify(currentSearchEngine));
         }, [searchEngines, currentSearchEngine]);
         
-        // ... существующие функции ...
-
         // Функция для добавления новой поисковой системы
         const addSearchEngine = () => {
             if (!newSearchEngineName.trim() || !newSearchEngineUrl.trim()) {
@@ -1380,7 +1329,7 @@ const SearchInput = ({
       </div>
 
       {showHistory && searchHistory.length > 0 && (
-        <div className="absolute z-10 w-full mt-1 bg_blur_5 rounded-lg shadow-lg border border-gray-200 dark:border-dark-600">
+        <div className="absolute z-10 w-full mt-[6px] bg_blur_5 rounded-lg shadow-lg border border-gray-200 dark:border-dark-600">
           <div className="py-1">
             <div
                 className="px-4 py-1 cursor-pointer flex items-center justify-end"
@@ -1906,7 +1855,7 @@ const renderThemePresets = () => (
                 <input
                     type="range"
                     min="0"
-                    max="10"
+                    max={panelBlurMax}
                     step="1"
                     value={panelBlur}
                     onChange={(e) => setPanelBlur(parseInt(e.target.value))}
@@ -1916,7 +1865,7 @@ const renderThemePresets = () => (
                     Текущее размытие: {panelBlur}px
                 </div>
             </div>
-            
+
             <div className="mb-4">
                 <label className="block mb-2">Добавить свои обои</label>
                 <div className="flex flex-col gap-2">
