@@ -10,30 +10,30 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
-    tailwind.config = {
-        darkMode: 'class',
-        theme: {
-            extend: {
-                colors: {
-                    primary: {
-                        500: 'hsl(var(--primary-hue) var(--primary-saturation) var(--primary-lightness))',
-                        600: 'hsl(var(--primary-hue) var(--primary-saturation) calc(var(--primary-lightness) - 10%))'
-                    },
-                    secondary: 'hsl(var(--secondary-hue) var(--secondary-saturation) var(--secondary-lightness))',
-                    accent: 'hsl(var(--accent-hue) var(--accent-saturation) var(--accent-lightness))',
-                    dark: {
-                        900: '#121212',
-                        800: '#1e1e1e',
-                        700: '#2d2d2d',
-                        600: '#3d3d3d',
-                        500: '#4d4d4d'
-                    },
-                    light: '#e2e8f0'
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            500: 'hsl(var(--primary-hue), var(--primary-saturation), var(--primary-lightness))',
+                            600: 'hsl(var(--primary-hue), var(--primary-saturation), calc(var(--primary-lightness) - 10%))'
+                        },
+                        secondary: 'hsl(var(--secondary-hue), var(--secondary-saturation), var(--secondary-lightness))',
+                        accent: 'hsl(var(--accent-hue), var(--accent-saturation), var(--accent-lightness))',
+                        dark: {
+                            900: '#121212',
+                            800: '#1e1e1e',
+                            700: '#2d2d2d',
+                            600: '#3d3d3d',
+                            500: '#4d4d4d'
+                        },
+                        light: '#e2e8f0'
+                    }
                 }
             }
         }
-    }
-</script>
+    </script>
     <style type="text/tailwindcss">
         :root {
             --primary-hue: 250;
@@ -340,7 +340,6 @@
         // Основной компонент приложения
         function App() {
             const [activeTab, setActiveTab] = useState('all');
-            const [showWeather, setShowWeather] = useState(false);
             const [currentTime, setCurrentTime] = useState('');
             const [currentDate, setCurrentDate] = useState('');
             const [darkMode, setDarkMode] = useState(() => {
@@ -2432,7 +2431,7 @@ const renderThemePresets = () => (
             const renderMainPage = () => {
                 return (
                     <>
-                        <header className="flex flex-col md:flex-row justify-between items-center gap-5 py-5 mb-8">
+                        <header className="flex flex-col md:flex-row justify-center md:justify-between items-center gap-5 py-5 mb-8">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 bg-primary-500 rounded-xl flex items-center justify-center">
                                     <i className="fas fa-rocket text-white dark:text-black"></i>
@@ -2440,33 +2439,19 @@ const renderThemePresets = () => (
                                 <h1 className="text-2xl font-bold text-primary-500">SmartStart</h1>
                             </div>
                             
-                            <div className="flex items-center gap-5 panel rounded-2xl px-6 py-3 no-select">
-                                <div className="text-2xl font-semibold tracking-tight">{currentTime}</div>
-                                <div 
-                                    className="flex flex-col items-center cursor-pointer py-2 px-4 rounded-xl"
-                                >
+                            <div className="flex items-center gap-2">
+                                <div className="panel rounded-xl px-6 py-3 no-select">
+                                    <div className="flex items-center gap-5">
+                                        <div className="text-2xl font-semibold tracking-tight">{currentTime}</div>
                                         <div className="text-lg font-medium">{currentDate}</div>
+                                    </div>
                                 </div>
-                            </div>
-                            
-                            <div className="flex gap-3">
+                                
                                 <button 
-                                    className="flex items-center gap-2 p-3 rounded-xl panel dark:hover:bg-dark-700"
-                                    onClick={() => setDarkMode(!darkMode)}
-                                >
-                                    {darkMode ? (
-                                        <i className="fas fa-sun text-xl"></i>
-                                    ) : (
-                                        <i className="fas fa-moon text-xl"></i>
-                                    )}
-                                    <span>Сменить тему</span>
-                                </button>
-                                <button 
-                                    className="flex items-center gap-2 p-3 rounded-xl panel dark:hover:bg-dark-700"
+                                    className="flex items-center justify-center py-3 px-4 rounded-xl panel dark:hover:bg-dark-700"
                                     onClick={() => setShowSettings(true)}
                                 >
                                     <i className="fas fa-cog text-xl"></i>
-                                    <span>Настройки</span>
                                 </button>
                             </div>
                         </header>
