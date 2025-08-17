@@ -2,7 +2,7 @@
 <html lang="ru" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <title>Smart Start Page</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -326,6 +326,38 @@
             .import-export-btn-secondary {
                 @apply bg-slate-200 dark:bg-dark-800;
             }
+
+            .wallpaper-gallery {
+                @apply grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 p-4;
+            }
+            
+            .wallpaper-item {
+                @apply relative overflow-hidden cursor-pointer max-h-[309px];
+                aspect-ratio: 4/3;
+            }
+
+            /* На мобильных — вертикальные (9/16) */
+            @media (max-width: 768px) {
+                .wallpaper-item {
+                    aspect-ratio: 9/16;
+                }
+            }
+
+            .wallpaper-item img {
+                @apply w-full h-full object-cover;
+            }
+
+            .fullscreen-wallpaper-overlay {
+                @apply fixed inset-0 z-50 bg-black/90 backdrop-blur-lg;
+            }
+            
+            .fullscreen-wallpaper-content {
+                @apply absolute inset-0 flex items-center justify-center p-4;
+            }
+            
+            .fullscreen-wallpaper-image {
+                @apply max-w-full max-h-full object-contain;
+            }
         }
     </style>
 </head>
@@ -371,6 +403,14 @@
                 { name: 'Яндекс', url: 'https://yandex.ru/search/?text=%s' }
             ];
         });
+        
+        // Добавляем новое состояние для управления вкладкой обоев
+        const [showWallpaperTab, setShowWallpaperTab] = useState(false);
+        const [fullscreenWallpaper, setFullscreenWallpaper] = useState(null);
+        const [selectedWallpapers, setSelectedWallpapers] = useState([]);
+        const [startY, setStartY] = useState(null);
+        const [showUrlModal, setShowUrlModal] = useState(false);
+        const [wallpaperUrl, setWallpaperUrl] = useState('');
 
         const [importExportStatus, setImportExportStatus] = useState(null);
 
@@ -378,6 +418,48 @@
     const saved = localStorage.getItem('searchHistory');
     return saved ? JSON.parse(saved) : [];
 });
+
+// Добавляем состояние для позиции обоев при свайпе
+const [swipeState, setSwipeState] = useState({
+  startY: 0,
+  currentY: 0,
+  isSwiping: false
+});
+
+// Обработчики касаний
+const handleTouchStart = (e) => {
+  setSwipeState({
+    startY: e.touches[0].clientY,
+    currentY: e.touches[0].clientY,
+    isSwiping: true
+  });
+};
+
+const handleTouchMove = (e) => {
+  if (!swipeState.isSwiping) return;
+  
+  const currentY = e.touches[0].clientY;
+  setSwipeState(prev => ({
+    ...prev,
+    currentY
+  }));
+};
+
+const handleTouchEnd = () => {
+  const deltaY = swipeState.currentY - swipeState.startY;
+  
+  // Если свайп достаточно сильный - закрываем
+  if (Math.abs(deltaY) > 150) {
+    setFullscreenWallpaper(null);
+  }
+  
+  // Сбрасываем состояние свайпа
+  setSwipeState({
+    startY: 0,
+    currentY: 0,
+    isSwiping: false
+  });
+};
 
 const [panelBlurMax, setPanelBlurMax] = useState(10);
 const [panelBlur, setPanelBlur] = useState(() => {
@@ -1827,145 +1909,235 @@ const renderThemePresets = () => (
   </div>
 );
 
-            const renderWallpaperSettings = () => (
-        <div className="settings-panel mb-6">
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-3">
-                <i className="fas fa-image"></i> Обои
-            </h2>
-            
-            <div className="mb-4">
-                <label className="block mb-2">Прозрачность обоев</label>
-                <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.1"
-                    value={wallpaper.opacity}
-                    onChange={(e) => updateWallpaperOpacity(e.target.value)}
-                    className="w-full"
-                />
-                <div className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                    Текущая прозрачность: {Math.round(wallpaper.opacity * 100)}%
-                </div>
-            </div>
-
-            <div className="mb-4">
-                <label className="block mb-2">Сила размытия панелей</label>
-                <input
-                    type="range"
-                    min="0"
-                    max={panelBlurMax}
-                    step="1"
-                    value={panelBlur}
-                    onChange={(e) => setPanelBlur(parseInt(e.target.value))}
-                    className="w-full"
-                />
-                <div className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                    Текущее размытие: {panelBlur}px
-                </div>
-            </div>
-
-            <div className="mb-4">
-                <label className="block mb-2">Добавить свои обои</label>
-                <div className="flex flex-col gap-2">
-                    <input
-                        type="text"
-                        placeholder="URL изображения"
-                        className="flex-1 p-2 rounded-lg bg-slate-100 dark:bg-dark-600"
-                        id="wallpaperUrlInput"
-                    />
-                    <input
-                        type="file"
-                        id="wallpaperFileInput"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                            const file = e.target.files[0];
-                            if (file) {
-                                addWallpaper(file);
-                                e.target.value = ''; // Сбрасываем значение input
-                            }
-                        }}
-                    />
-                    <div className="flex gap-2">
-                        <button 
-                            className="flex-1 bg-primary-500 text-white px-4 py-2 rounded-lg hover:bg-primary-600"
+const renderUrlModal = () => {
+    if (!showUrlModal) return null;
+    
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="settings-panel w-full max-w-md">
+                <h2 className="text-xl font-semibold mb-4">Добавить обои по URL</h2>
+                
+                <div className="space-y-4">
+                    <div>
+                        <label className="block mb-1">URL изображения</label>
+                        <input
+                            type="text"
+                            value={wallpaperUrl}
+                            onChange={(e) => setWallpaperUrl(e.target.value)}
+                            className="w-full p-3 rounded-xl bg-slate-100 dark:bg-dark-600 border border-transparent focus:border-primary-500 outline-none"
+                            placeholder="https://example.com/image.jpg"
+                        />
+                    </div>
+                    
+                    <div className="flex justify-end gap-3 pt-4">
+                        <button
+                            className="px-4 py-2 rounded-xl bg-slate-200 dark:bg-dark-700 hover:bg-slate-300 dark:hover:bg-dark-700"
                             onClick={() => {
-                                const input = document.getElementById('wallpaperUrlInput');
-                                addWallpaper(input.value);
-                                input.value = '';
+                                setShowUrlModal(false);
+                                setWallpaperUrl('');
                             }}
                         >
-                            Добавить по URL
+                            Отмена
                         </button>
-                        <button 
-                            className="flex-1 bg-slate-200 dark:bg-dark-700 px-4 py-2 rounded-lg hover:bg-slate-300 dark:hover:bg-dark-600"
-                            onClick={() => document.getElementById('wallpaperFileInput').click()}
+                        <button
+                            className="px-4 py-2 rounded-xl bg-primary-500 text-white hover:bg-primary-600"
+                            onClick={() => {
+                                if (wallpaperUrl.trim() !== '') {
+                                    addWallpaper(wallpaperUrl.trim());
+                                    setShowUrlModal(false);
+                                    setWallpaperUrl('');
+                                }
+                            }}
+                            disabled={!wallpaperUrl.trim()}
                         >
-                            <i className="fas fa-upload mr-2"></i>
-                            Загрузить файл
+                            Добавить
                         </button>
                     </div>
                 </div>
             </div>
+        </div>
+    );
+};
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                <button 
-                    className="h-20 rounded-lg bg-slate-100 dark:bg-dark-800 flex items-center justify-center"
-                    onClick={() => updateWallpaper('none', '')}
-                >
-                    <span className="font-medium">Без обоев</span>
-                </button>
-                
-                {[...wallpapers, ...customWallpapers].map((wp, index) => (
-                    <div key={index} className="relative group">
+const renderWallpaperTab = () => {
+    return (
+        <div className="fixed inset-0 z-40 overflow-y-auto">
+            <div className="min-h-screen bg_blur_5">
+                {/* Шапка галереи */}
+                <div className="sticky bg-black bg_blur_5 top-0 rounded-lg m-4 z-10 p-4 flex items-center justify-between">
+                    <h1 className="text-2xl font-bold">Галерея обоев</h1>
+                    <button 
+                        className="p-2"
+                        onClick={() => setShowWallpaperTab(false)}
+                    >
+                        <i className="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+
+                <div className="px-4 mb-4">
+                    <div className="mb-4 ml-2 flex gap-3 text-2xl font-bold">
+                        <i className="fas fa-upload"></i>
+                        <h1>Загрузить</h1>
+                    </div>
+                    <div className="flex gap-3">
+                        {/* Кнопка загрузки с устройства */}
+                        <label 
+                            htmlFor="wallpaperFileInput"
+                            className="flex-1 flex items-center justify-center gap-2 p-3 rounded-xl bg-slate-200 dark:bg-dark-800 hover:bg-slate-300 dark:hover:bg-dark-700 cursor-pointer"
+                        >
+                            <i className="fas fa-upload"></i>
+                            <span>с устройства</span>
+                            <input
+                                type="file"
+                                id="wallpaperFileInput"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                    const file = e.target.files[0];
+                                    if (file) {
+                                        addWallpaper(file);
+                                        e.target.value = ''; // Сбрасываем значение input
+                                    }
+                                }}
+                            />
+                        </label>
+                        
+                        {/* Кнопка добавления по ссылке */}
                         <button 
-                            className="h-20 rounded-lg overflow-hidden relative w-full"
-                            onClick={() => updateWallpaper(wp.type, wp.value)}
+                            className="flex-1 flex items-center justify-center gap-2 p-3 rounded-xl bg-slate-200 dark:bg-dark-800 hover:bg-slate-300 dark:hover:bg-dark-700"
+                            onClick={() => setShowUrlModal(true)}
+                        >
+                            <i className="fas fa-link"></i>
+                            <span>по ссылке</span>
+                        </button>
+                        <button
+                            className="md:block hidden flex-1 flex items-center justify-center gap-2 p-3 rounded-xl bg-slate-200 dark:bg-dark-800"
+                            onClick={() => updateWallpaper('none', '')}
+                        >
+                            <i className="fas fa-ban mr-2"></i>
+                            <span>Без обоев</span>
+                        </button>
+                    </div>
+                    <button
+                        className="flex-1 md:hidden w-full mt-2 flex items-center justify-center gap-2 p-3 rounded-xl bg-slate-200 dark:bg-dark-800"
+                        onClick={() => updateWallpaper('none', '')}
+                    >
+                        <i className="fas fa-ban"></i>
+                        <span>Без обоев</span>
+                    </button>
+                </div>
+
+                {/* Основной контент галереи */}
+                <div className="wallpaper-gallery">
+                    {/* Обои из коллекции */}
+                    {[...wallpapers, ...customWallpapers].map((wp, index) => (
+                        <div 
+                            key={index} 
+                            className="wallpaper-item rounded-xl relative group cursor-pointer"
+                            onClick={() => setFullscreenWallpaper(wp)}
                         >
                             {wp.type === 'image' ? (
                                 <img 
                                     src={wp.value} 
                                     alt={wp.name}
-                                    className="w-full h-full object-cover"
-                                    onError={(e) => {
-                                        // Обработка ошибок загрузки изображения
-                                        e.target.style.display = 'none';
-                                    }}
                                 />
                             ) : (
-                                <div className="w-full h-full flex items-center justify-center text-slate-400 dark:text-slate-500">
-                                    <i className="fas fa-image text-2xl"></i>
+                                <div className="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-dark-800">
+                                    <i className="fas fa-image text-3xl text-slate-400 dark:text-slate-600"></i>
+                                </div>
+                            )}
+                            
+                            {/* Индикатор текущих обоев */}
+                            {wallpaper.type === wp.type && wallpaper.value === wp.value && (
+                                <div className="absolute top-2 left-2 bg-primary-500 text-white text-xs px-2 py-1 rounded-md">
+                                    Активно
                                 </div>
                             )}
 
-                            {/* Добавляем иконку типа изображения */}
-                            <div className="absolute bottom-1 right-1 bg-black bg-opacity-50 rounded-md justify-center items-center px-[6px]">
+                            <div className="absolute top-1 right-1 bg-black bg-opacity-50 rounded-md justify-center items-center px-[6px] py-[2px]">
                                 {wp.isBase64 ? (
                                     <i className="fas fa-upload text-white text-xs"></i>
                                 ) : (
                                     <i className="fas fa-link text-white text-xs"></i>
                                 )}
                             </div>
-                        </button>
-                        <button
-                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                if (index < wallpapers.length) {
-                                    removeWallpaper(index);
-                                } else {
-                                    removeCustomWallpaper(index - wallpapers.length);
-                                }
-                            }}
-                        >
-                            <i className="fas fa-times text-xs"></i>
-                        </button>
-                    </div>
-                ))}
+                        </div>
+                    ))}                    
+                </div>
             </div>
         </div>
     );
+};
+
+const renderFullscreenWallpaper = () => {
+    if (!fullscreenWallpaper) return null;
+
+    const isCurrent = wallpaper.type === fullscreenWallpaper.type && 
+                     wallpaper.value === fullscreenWallpaper.value;
+
+    return (
+        <div 
+            className="fullscreen-wallpaper-overlay"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+        >
+            <div 
+                className="fullscreen-wallpaper-content"
+                style={{
+                    transform: `translateY(${swipeState.isSwiping ? (swipeState.currentY - swipeState.startY) : 0}px)`,
+                    transition: swipeState.isSwiping ? 'none' : 'transform 0.3s cubic-bezier(0.22, 1, 0.36, 1)'
+                }}
+            >
+                {fullscreenWallpaper.type === 'image' ? (
+                    <img 
+                        src={fullscreenWallpaper.value} 
+                        alt={fullscreenWallpaper.name}
+                        className="fullscreen-wallpaper-image rounded-xl"
+                        style={{
+                            opacity: 1 - Math.min(Math.abs(swipeState.currentY - swipeState.startY) / 300, 0.5),
+                            touchAction: 'none'
+                        }}
+                        draggable="false"
+                    />
+                ) : (
+                    <div className="w-full h-full flex items-center justify-center text-white">
+                        <i className="fas fa-image text-5xl"></i>
+                    </div>
+                )}
+            </div>
+        
+            <div className="fixed bottom-0 left-0 right-0 p-4 bg-black/50 backdrop-blur-md">
+                <div className="max-w-md mx-auto flex gap-4">
+                    <button 
+                        className={`flex-1 ${isCurrent ? 'bg-white text-black' : 'bg-primary-500 text-white'} py-3 rounded-lg`}
+                        disabled={isCurrent}
+                        onClick={() => {
+                            updateWallpaper(fullscreenWallpaper.type, fullscreenWallpaper.value);
+                            setFullscreenWallpaper(null);
+                        }}
+                    >
+                        {isCurrent ? 'Применено' : 'Применить'}
+                    </button>
+                    <button 
+                        className="flex-1 bg-red-500 text-white py-3 rounded-lg"
+                        onClick={() => {
+                            const index = [...wallpapers, ...customWallpapers].indexOf(fullscreenWallpaper);
+                            if (index < wallpapers.length) {
+                                removeWallpaper(index);
+                            } else {
+                                removeCustomWallpaper(index - wallpapers.length);
+                            }
+                            setFullscreenWallpaper(null);
+                        }}
+                    >
+                        Удалить
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
             // Рендеринг настроек
             const renderSettings = () => {
@@ -2133,8 +2305,53 @@ const renderThemePresets = () => (
         </div>
     </div>
 </div>
+ 
+<div className="settings-panel mb-6">
+    <h2 className="text-xl font-semibold mb-4 flex items-center gap-3">
+        <i className="fas fa-image"></i> Обои
+    </h2>
 
-                        {renderWallpaperSettings()}
+    <div className="mb-4">
+        <label className="block mb-2">Прозрачность обоев</label>
+        <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.1"
+            value={wallpaper.opacity}
+            onChange={(e) => updateWallpaperOpacity(e.target.value)}
+            className="w-full"
+        />
+        <div className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            Текущая прозрачность: {Math.round(wallpaper.opacity * 100)}%
+        </div>
+    </div>
+
+    <div className="mb-4">
+        <label className="block mb-2">Сила размытия панелей</label>
+        <input
+            type="range"
+            min="0"
+            max={panelBlurMax}
+            step="1"
+            value={panelBlur}
+            onChange={(e) => setPanelBlur(parseInt(e.target.value))}
+            className="w-full"
+        />
+        <div className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            Текущее размытие: {panelBlur}px
+        </div>
+    </div>
+
+    <button 
+        className="w-full bg-primary-500 text-white p-4 rounded-xl hover:bg-primary-600 flex items-center justify-center gap-3"
+        onClick={() => setShowWallpaperTab(true)}
+    >
+        <i className="fas fa-image"></i>
+        <span>Открыть галерею обоев</span>
+    </button>
+</div>
+
                         {renderThemePresets()}
 
 <div className="settings-panel mb-6">
@@ -2618,7 +2835,13 @@ const renderThemePresets = () => (
             
             return (
                 <div className="max-w-6xl mx-auto">
-                    {showSettings ? renderSettings() : renderMainPage()}
+                    {showWallpaperTab ? renderWallpaperTab() : 
+                     showSettings ? renderSettings() : renderMainPage()}
+                    
+                    {fullscreenWallpaper && renderFullscreenWallpaper()}
+                    
+                    {renderUrlModal()}
+
                     {showGroupModal && renderGroupModal()}
                     {showSiteModal && renderSiteModal()}
                     {showIconManager && renderIconManager()}
